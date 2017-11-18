@@ -1,0 +1,13 @@
+Package: HumanDEU
+Type: Package
+Title: Analysis of tissue-dependent exon usage in humans
+Version: 0.0.99
+Date: 2017-04-17
+Author: Alejandro Reyes
+Maintainer: Alejandro Reyes <alejandro.reyes.ds@gmail.com>
+Description: This data package contains the code and data needed to reproduce the statistics and figures from the manuscript entitled: \"Transcript Isoform Differences Across Human Tissues Are Predominantly Driven By Alternative Start And Termination Sites Of Transcription\". The data from this package contains unidentifiable summarized data. The raw data was downloaded from dbGAP using the accession phs000424.v6.p1. 
+License: LGPL
+biocViews: ExperimentData
+VignetteBuilder: knitr
+Suggests: DESeq2, GenomicRanges, GenomicFeatures, genefilter, statmod, gdata, RColorBrewer, ggplot2, gplots, cluster, clue, grid, gridExtra, ggbio, Gviz, geneplotter, matrixStats, pheatmap, BiocStyle, knitr
+RoxygenNote: 6.0.1

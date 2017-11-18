@@ -1,0 +1,614 @@
+---
+title: "Analysis related to Figure 2"
+author: "Alejandro Reyes"
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('HumanDEU')`"
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{HumanDEU}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r style, echo=FALSE, results='asis'}
+BiocStyle::markdown()
+```
+
+* Exon statistics
+
+We attach the libraries needed for this vignette. We 
+also load the data object containing gene and 
+transcript annotations.
+
+```{r exonStats}
+
+library(HumanDEU)
+library(scales)
+library(DEXSeq)
+library(matrixStats)
+library(dplyr)
+library(cowplot)
+library(MatchIt)
+library(xtable)
+library(VennDiagram)
+library(gridExtra)
+
+
+data("dxdObjects", "geneInfo", "transcriptInfo")
+
+```
+
+The code below displays the number of exonic regions from 
+multi-exonic genes, including those from protein-coding genes.
+
+```{r exonStats2}
+
+numberOfSamples <- length( unique( c( unique( as.character( colData(dxd1)$sample ) ),
+                  unique( as.character( colData(dxd2)$sample ) ),
+                  unique( as.character( colData(dxd3)$sample ) ) ) ) )
+numberOfSamples
+
+multiExonicGenes <- ( as.data.frame( mcols(dxd1) ) %>%
+                         dplyr:::count(groupID) %>%
+                         filter( n > 1 ) )$groupID
+
+numberExons <- nrow( filter( as.data.frame(mcols(dxd1)),
+                            groupID %in% multiExonicGenes ) )
+numberExons
+
+proteinCodingGenes <- filter( geneInfo,
+                             gene_biotype == "protein_coding" )$ensembl_gene_id
+
+length( intersect( multiExonicGenes, proteinCodingGenes ) )
+
+nrow( filter( as.data.frame( mcols(dxd1 ) ),
+             groupID %in% multiExonicGenes,
+             groupID %in% proteinCodingGenes ) )
+
+```
+
+Next, we load the of the precomputed objects and format them
+in a 'tidy' data frame that summarized the statistics for
+each exonic region in each subset of the _GTEx_ data. 
+
+```{r tidirize}
+
+data( "crossCoefs1", "crossCoefs2", "crossCoefs3",
+      "pvals1", "pvals2", "pvals3",
+      "dxdJRObjects", "dsdObjects" )
+
+getResultsDF <- function( crossCoefs, dxd, dxdJR, pvals, label="" ){
+    tdu <- unlist( lapply(seq_len(dim(crossCoefs)[1]), function(i){
+               max(abs( colMedians( (crossCoefs[i,,] - mean(crossCoefs[i,,]) ) / sd(crossCoefs[i,,]) ) ) )
+           }) )
+    #tdu2 <- unlist( lapply(seq_len(dim(crossCoefs)[1]), function(i){
+    #max(abs( colMedians( crossCoefs[i,,] ) ) )
+    #}) )
+    sds <- unlist( lapply(seq_len(dim(crossCoefs)[1]), function(i){
+               sd( crossCoefs[i,,] )
+           }) )
+    names(tdu) <- dimnames(crossCoefs)[["exon"]]
+#    names(tdu2) <- dimnames(crossCoefs)[["exon"]]
+    names(sds) <- dimnames(crossCoefs)[["exon"]]
+    rMeans <- rowMeans( counts( dxd, normalized=TRUE )[,colData(dxd)$exon=="this"] )
+    oMeans <- rowMeans( counts( dxdJR, normalized=TRUE )[,colData(dxdJR)$exon=="others"] )
+    nameList <- strsplit(rownames(dxd), ":")
+    df <- data.frame(
+        gene=sapply( nameList, "[[", 1),
+        exon=sapply( nameList, "[[", 2),
+        mean=rMeans,
+        esMeans=oMeans,
+        tdu=tdu,
+        #tduR=tdu2,
+        sds=sds,
+        pvals=pvals, label=label)
+      #   df$pvals[rMeans < 10] <- NA
+    df$padj <- p.adjust( df$pvals, method="BH" )
+    df
+}
+
+path <- system.file("data", package="HumanDEU")
+
+fl <- file.path( path, "resultsDF.RData" )
+ 
+if( !file.exists( fl ) ){
+    resultsDF <- rbind(
+        getResultsDF( crossCoefs1, dxd1, dxd1JR, pvalsTissues1, label="subsetA" ),
+        getResultsDF( crossCoefs2, dxd2, dxd2JR, pvalsTissues2, label="subsetB" ),
+        getResultsDF( crossCoefs3, dxd3, dxd3JR, pvalsTissues3, label="subsetC" ) )
+    save( resultsDF, file="../data/resultsDF.RData")
+}else{
+    load(fl)
+}
+
+getDEUNumbers <- function( lab, dfFun, returnEx=FALSE ){
+    df <- filter( dfFun,
+                 label %in% lab,
+                 padj < 0.1,
+                 tdu > 1 )
+    numbOfExons <- nrow(df)
+    numbOfGenes <- length(unique(df$gene))
+    cat( sprintf("%s has %s DEU exons that correspond to %s genes\n",
+                 lab, numbOfExons, numbOfGenes) )
+    if( returnEx ){
+        return( paste(df$gene, df$exon, sep=":") )
+    }
+}
+
+allExons <- list(
+    getDEUNumbers( "subsetA", resultsDF, returnEx=TRUE ),
+    getDEUNumbers( "subsetB", resultsDF, returnEx=TRUE ),
+    getDEUNumbers( "subsetC", resultsDF, returnEx=TRUE ) )
+names(allExons) <- c("A", "B", "C")
+
+```
+
+Below we plot a venn diagram of the exons that are TDU in
+each subset of the _GTEx_ data. We also draw a venn diagram
+of the genes with at least one exon with TDU in each 
+subset of the _GTEx_ data.
+
+```{r vennDiagram, fig.height=2.8, fig.width=5.5}
+
+formatNumbersInVenn <- function(p){
+    idx <- sapply(p, function(i) grepl("text", i$name))
+    for(i in 1:7){
+        p[idx][[i]]$label <-
+            format(as.numeric(p[idx][[i]]$label), big.mark=",", scientific=FALSE)
+    }
+    p
+}
+
+venn.plot <- venn.diagram(
+    allExons, NULL,
+    fill=c("#66c2a5", "#fc8d62", "#8da0cb"),
+    main=sprintf("Exons (%s)",
+        format(numberExons, big.mark=",", scientific=FALSE) ) )
+
+venn.plot <- formatNumbersInVenn(venn.plot)
+allGenes <- lapply( allExons, function(x){
+                       unique( sapply(strsplit(x, ":"), "[[", 1 ) ) } )
+
+numG <- length(unique(unlist(allGenes)))
+numG/length(unique( multiExonicGenes ))
+length( unique( multiExonicGenes ) )
+
+length(allGenes[["A"]])/length(unique(multiExonicGenes))
+length(allGenes[["B"]])/length(unique(multiExonicGenes))
+length(allGenes[["C"]])/length(unique(multiExonicGenes))
+
+venn.plot.genes <- venn.diagram(
+    allGenes, NULL,
+    fill=c("#66c2a5", "#fc8d62", "#8da0cb"),
+    main=sprintf("Genes (%s)", format(length(unique( multiExonicGenes)),
+        big.mark=",", scientific=FALSE) ) )
+venn.plot.genes <- formatNumbersInVenn(venn.plot.genes)
+
+gl <- grid.layout(nrow=1, ncol=2)
+vp.1 <- viewport(layout.pos.col=1, layout.pos.row=1)
+vp.2 <- viewport(layout.pos.col=2, layout.pos.row=1)
+pushViewport(viewport(layout=gl))
+pushViewport(vp.1)
+grid.draw(venn.plot)
+popViewport()
+pushViewport(vp.2)
+grid.draw(venn.plot.genes)
+popViewport(1)
+
+```
+
+Then, we get the number of exons with TDU in at least one
+of the subsets of the _GTEx_ data. 
+
+```{r allNumbers}
+
+#sapply( allExons, function(x){ length(x) / numberExons } )
+
+allExons <- unique( unlist(allExons) )
+
+
+cat( sprintf( "Total number of DEU exons %s\n", length( allExons ) ) )
+cat( sprintf( "Total number of exons %s\n", numberExons ) )
+cat( sprintf( "Percentage of DEU exons: %s\n",
+                       round( 100 * length(allExons) / numberExons ) ) )
+  
+```
+
+We then plot the relation between the tissue score and the
+p-value. Subset B and C are plotted together and are included
+in the supplementary material. 
+
+```{r volcanoPlot, fig.height=2.8, fig.width=5.6}
+
+effectSizeVsPval <- function( lab, xmax=1.5 ){
+    resultsDF$pvalsTrans <- -log10( resultsDF$pvals )
+    res <- filter(resultsDF, label==lab, mean > 10)
+    res$col <- ifelse( res$padj < 0.1 & res$tdu > 1, "darkred", "#000010" )
+    panel1 <- ggplot( res, aes(tdu, pvalsTrans, fill=col, col=col) ) +
+        geom_hex( aes(alpha=log(..count..)),fill=c("#000000"), bins=75) +
+        xlim(0, xmax) +
+        scale_colour_manual(values=c("#00000030", "#8b000060")) +
+        theme(legend.position="none") +
+        geom_vline(xintercept = 1, lwd=1, col="darkred") +
+        geom_hline(yintercept = min(res$pvalsTrans[which(res$padj < 0.1)], na.rm=TRUE),
+                   lwd=1, col="darkred" ) +
+        xlab("Tissue score") +
+        ylab( expression(paste(-log[10], "(p-value)") ) )
+    panel1
+}
+
+fig2PanelA <- effectSizeVsPval( "subsetA" )
+effectSiS1 <- effectSizeVsPval( "subsetB", xmax=2.5)
+effectSiS2 <- effectSizeVsPval( "subsetC", xmax=2)
+
+sup2 <- plot_grid( effectSiS1, effectSiS2,
+                  ncol=2, label_size = 16,
+                  labels="AUTO" )
+
+print(sup2)
+
+```
+
+For each gene, we estimate the number of exonic regions
+and the number of base pairs of the union of its exonic 
+regions.  
+
+```{r geneWidth}
+
+exonsPerGene <- as.data.frame(mcols(dxd1)) %>% dplyr:::count(groupID)
+colnames(exonsPerGene)[2] <- "exons"
+geneWidth <- tapply(
+    width(SummarizedExperiment::rowRanges(dxd1)),
+    groupIDs(dxd1), sum )
+stopifnot( names( geneWidth ) == exonsPerGene$groupID )
+exonsPerGene$geneWidth <- as.numeric( geneWidth )
+
+```
+
+Then, we estimate the fraction of exonic regions that are
+used in a tissue-dependent manner and the fraction of base
+pairs that are affected by TDU.
+
+```{r tduLength}
+
+addNumDeu <- function( exonsPerGene, num ){
+    subset <- paste0( "subset", LETTERS[num] )
+    colName <- paste0( "deuExons", LETTERS[num] )
+    colName2 <- paste0("affectedBp", LETTERS[num])
+    deuEx <- getDEUNumbers( subset, resultsDF, returnEx=TRUE )
+    deuExGn <- sapply( strsplit( deuEx, ":" ), "[[", 1 )
+    affectedWidth <- width( SummarizedExperiment::rowRanges( dxd1 )[deuEx] )
+    affectedWidth <- tapply( affectedWidth, deuExGn, sum )
+    deuPerGene <- table( deuExGn )
+    exonsPerGene[[colName]] <- 0
+    exonsPerGene[[colName]][match( names(deuPerGene), exonsPerGene$groupID )] <- deuPerGene
+    exonsPerGene[[paste0("fracAffectedExons", LETTERS[num])]] <-
+        exonsPerGene[[colName]] / exonsPerGene$exons
+    exonsPerGene[[colName2]] <- 0
+    exonsPerGene[[colName2]][match( names(affectedWidth), exonsPerGene$groupID )] <- affectedWidth
+    exonsPerGene[[paste0("fracAffectedBp", LETTERS[num])]] <-
+        exonsPerGene[[colName2]] / exonsPerGene$geneWidth
+    exonsPerGene
+}
+
+addGeneExpr <- function( exonsPerGene, num ){
+    dsd <- get( paste0( "dsd", num ) )
+    dsd <- estimateSizeFactors( dsd )
+    geneMeans <- rowMeans( counts( dsd, normalized=TRUE) )
+    colName <- paste0( "mean", LETTERS[num] )
+    exonsPerGene[[colName]] <-
+        geneMeans[match( exonsPerGene$groupID, names(geneMeans) )]
+    exonsPerGene
+}
+
+for( i in 1:3 ){
+    exonsPerGene <- addGeneExpr( exonsPerGene, i )
+    exonsPerGene <- addNumDeu( exonsPerGene, i )
+}
+
+exonsPerGene <- as.data.frame(exonsPerGene)
+rownames(exonsPerGene) <- exonsPerGene$groupID
+
+backFile <- file.path( path, "geneBackgrounds.RData" )
+
+if( file.exists( backFile ) ){
+    load( backFile )
+}else{
+    backgroundList <- lapply( c("A", "B", "C"),
+        function(x){
+            frm <- as.formula( paste( "sign ~ exons +", paste0( "mean", x ) ) )
+            df <- exonsPerGene
+            df$sign <- as.numeric( df$deuExonsA > 0 )
+            set.seed(100)
+            mm <- matchit( frm, df, meathod="nearest", distance="mahalanobis" )$match.matrix[,1]
+            mm
+        } )
+    names(backgroundList) <- c("subsetA", "subsetB", "subsetC")
+}
+
+```
+
+Then, we print a table containing all the information 
+(corresponding to supplementary figure 1). 
+
+```{r table1}
+
+table1 <- sapply( c("A", "B", "C"),
+                 function(x){
+                     mean <- paste0( "mean", x )
+                     deuExons <- paste0( "deuExons", x )
+                     expressed <- table( exonsPerGene$exons > 1 & exonsPerGene[,mean] > 100 )["TRUE"]
+                     deuExpressed <- table(
+                         exonsPerGene$exons > 1 &
+                         exonsPerGene[,deuExons] > 0 &
+                         exonsPerGene[,mean] > 100 )["TRUE"]
+                     c( `Expressed (> 100 counts)`=expressed,
+                        `Expressed and TDU`=deuExpressed,
+                        `Percentage`=round(deuExpressed/expressed*100) )
+                 })
+rownames(table1) <- gsub(".TRUE", "", rownames(table1))
+colnames(table1) <- paste("Subset", colnames( table1 ))
+table1
+
+print( xtable( formatC(table1, format="d", big.mark=','), digits=0,
+  caption="Many highly expressed genes are subject to transcript
+  isoform regulation across tissues. Each column shows numbers
+  for one subset of the GTEx data. Row 1: Number of multi-exonic
+  genes with means of normalized sequenced fragments larger than
+  10. Row 2: Subset of genes
+  from the first row that have evidence of tissue-dependent
+  usage in at least one exonic region. Row 3: Percentage of
+  genes from the first row that have evidence of tissue-dependent
+  usage in at least one exonic region.",
+  label="tabS:table1"),
+  file="table1.tex" )
+
+```
+
+The code below generates and prints supplementary table 2. 
+
+```{r table2}
+
+table2 <- sapply( c("A", "B", "C"),
+              function(x){
+                  nameB <- paste0("subset", x)
+                  deuExons <- paste0("deuExons", x)
+                  back <- as.data.frame(geneInfo[ backgroundList[[nameB]],] %>% dplyr:::count(gene_biotype) )
+                  back <- back[back$gene_biotype %in% "protein_coding","n"]
+                  fore <- as.data.frame(
+                      geneInfo[rownames(exonsPerGene)[which( exonsPerGene[,deuExons] > 0 )],] %>%
+                          dplyr:::count(gene_biotype ) )
+                  fore <- fore[fore$gene_biotype %in% "protein_coding","n"]
+                  mt <- rbind(
+                      c( fore, sum( exonsPerGene[,deuExons] >  0 ) - fore ),
+                      c( back, length( backgroundList[[nameB]] ) - back ) )
+                  c(`(Foreground) PC`= mt[1,1],
+                    `(Foreground) Not PC`=mt[1,2],
+                    `(Background) PC`=mt[2,1],
+                    `(Background) Not PC`=mt[2,2],
+                    `Odds ratio`=fisher.test(mt)$estimate,
+                    `P-value`=fisher.test(mt)$p.value)
+              } )
+
+rownames( table2 )[5] <- "Odds ratio"
+colnames( table2 ) <- c("A", "B", "C")
+table2
+
+print(xtable( t(table2), display=c("s","d", "d", "d", "d", "f", "g"),
+                            caption="Enrichment of protein coding genes. Each row
+  shows data for one subset of the GTEx data. The first four columns
+  show the number of genes stratified by the categories depicted in
+  the column names (PC - protein coding; foreground - genes with
+  tissue-dependent usage in at least one exonic region; background -
+  genes matched for expression strength and number of exonic regions).
+  The fifth column shows odds ratios and the sixth column
+  shows p-values from the Fisher's exact tests",
+             label="tabS:table2",
+             align=c("p{0.03\\textwidth}", "p{0.15\\textwidth}",
+                     "p{0.15\\textwidth}", "p{0.15\\textwidth}", "p{0.15\\textwidth}",
+                     "p{0.08\\textwidth}", "p{0.15\\textwidth}") ),
+      format.args = list(big.mark = ",", decimal.mark = "."),
+      math.style.exponents = TRUE, digits=2,
+      file="table2.tex" )
+
+```
+
+We plot histograms of the fraction of exonic regions of each gene that are used in
+a tissue-dependent manner. We also plot the histogram of the fraction of exonic 
+regions of each gene that are affected by TDU. 
+
+```{r plotFracEx}
+
+plotFracEx <- function(subset){
+    dfPlot <- exonsPerGene %>%
+        filter_(paste(sprintf("deuExons%s", subset), ">", 0 ) )
+    pl <- ggplot(dfPlot, aes_string(x=paste0("fracAffectedExons", subset)) ) +
+        geom_histogram(color="black", fill="white", binwidth=.05, boundary=0, closed="left") +
+        xlab("Fraction of exonic\nregions with TDU") +
+        ylab("Number of genes") +
+        scale_y_continuous(labels = comma)
+    pl
+}
+
+fig2PanelB <- plotFracEx("A")
+
+plotFracBp <- function(subset){
+    dfPlot <- exonsPerGene %>%
+        filter_(paste(sprintf("deuExons%s", subset), ">", 0 ) )
+    pl <- ggplot(dfPlot, aes_string(x=paste0("fracAffectedBp", subset)) ) +
+        geom_histogram(color="black", fill="white", binwidth=.05, boundary=0, closed="left") +
+        xlab("Fraction of TDU\nbase-pairs") +
+        ylab("Number of genes") +
+        scale_y_continuous(labels = comma)
+    pl
+}
+
+fig2PanelC <- plotFracBp("A")
+
+plotFracBp <- function(subset){
+    dfPlot <- exonsPerGene %>%
+        filter_(paste(sprintf("deuExons%s", subset), ">", 0 ) )
+    pl <- ggplot(dfPlot, aes_string(x=paste0("fracAffectedBp", subset)) ) +
+        geom_histogram(color="black", fill="white", binwidth=.05, boundary=0, closed="left") +
+        xlab("Fraction of TDU\nbase-pairs") +
+        ylab("Number of genes") +
+        scale_y_continuous(labels = comma)
+    pl
+}
+
+fig2PanelC <- plotFracBp("A")
+
+```
+
+The code above generates plots for subset A of the _GTEx_ data. 
+The code below generates plots for subset B and C of the data.
+
+```{r figsup2, fig.height=5.6, fig.width=11.2}
+
+sup4 <- plot_grid(
+    plotFracEx("B"), plotFracEx("C"),
+    plotFracBp("B"), plotFracBp("C"),
+    ncol=2, label_size=16, labels="AUTO" )
+print(sup4)
+
+```
+
+Table 3 is generated by the code below.
+
+```{r table3}
+
+table3 <- sapply( c("A", "B", "C"),
+              function(x){
+                  fracAffected <- paste0( "fracAffectedExons", x )
+                  fracAffectedBp <- paste0( "fracAffectedBp", x )
+                  denominator <- sum(exonsPerGene[,fracAffected] > 0)
+                  below25Ex <- table( exonsPerGene[,fracAffected] < 0.25 &
+                      exonsPerGene[,fracAffected] > 0)["TRUE"]
+                  below25Ex
+                  denominator
+                  below25Ex / denominator
+                  below25Bp <- table(exonsPerGene[,fracAffectedBp] < 0.25 &
+                      exonsPerGene[,fracAffectedBp] > 0)["TRUE"]
+                  below25Bp
+                  below25Bp / denominator
+                  c(
+                      `# genes with TDU`=denominator,
+                      `# genes (< 25% ER TDU)`=below25Ex,
+                      `% genes (< 25% ER TDU)`=round( below25Ex/denominator * 100 ),
+                      `# genes (< 25% bp TDU)`=below25Bp,
+                      `% genes (< 25% bp TDU)`=round( below25Bp/denominator * 100 ) )
+} )
+
+table3 <- t( table3 )
+colnames( table3 ) <- gsub( ".TRUE", "", colnames( table3 ))
+table3
+
+print(xtable( table3, display=c("s", rep("d", ncol(table3) ) ),
+  caption="Transcript differences across tissues. Each
+row shows data for one subset of the GTEx data. The first
+column shows the number of genes with TDU in at least one
+exonic region. The second column displays the number of
+genes with TDU in less than 25\\% of their exonic regions.
+The third column shows the percentage of genes from the
+first row with TDU in less than 25\\% of their exonic regions.
+The fourth column displays the number of genes with TDU
+in less than 25\\% of their length (excluding introns). The
+fifth column shows the percentage of genes from the first
+row with TDU in less than 25\\% of their length (excluding
+introns).",
+    label="tabS:table3",
+    align=c("p{0.05\\textwidth}", "p{0.18\\textwidth}",
+            "p{0.18\\textwidth}", "p{0.18\\textwidth}",
+            "p{0.18\\textwidth}", "p{0.18\\textwidth}")),
+    format.args = list(big.mark = ",", decimal.mark = "."),
+    math.style.exponents = TRUE, digits=0,
+    size="\\small", file="table3.tex" )
+
+fl2 <- file.path( path, "resultsGeneTable.RData" )
+if( !file.exists( fl2 ) ){
+    save( exonsPerGene, file="../data/resultsGeneTable.RData")
+}
+
+filter( resultsDF, padj < 0.1 ) %>%
+          with(., tapply( pvals, label, max ))
+
+```
+
+The code below assembles figure number 2. 
+
+```{r fig2Full, fig.height=2.7, fig.width=8.1}
+
+fig2 <- plot_grid(
+    fig2PanelA, fig2PanelB, fig2PanelC,
+    ncol=3, labels = "AUTO", align = 'h')
+print( fig2 )
+
+```
+
+* Individual gene heatmap examples
+
+```{r supPlots, fig.height=8, fig.width=6.5}
+
+opt2 <- "ENSG00000095203"
+pl <- plotGeneREUCs( crossCoefs2, opt2 )
+print(pl)
+
+```
+
+Sashimi plot of the gene _EPB2_
+
+```{r sashimiEPB2, fig.height=2.5, fig.width=5}
+
+library(Gviz)
+tissues <- c( "Nerve - Tibial", "Muscle - Skeletal",
+              "Thyroid", "Skin - Sun Exposed (Lower leg)" )
+individual <- "GTEX-131XE"
+
+samples <- as.character( colData(dxd2)[colData(dxd2)$tissue %in% tissues &
+                                       colData(dxd2)$individual %in% individual &
+                                       colData(dxd2)$exon=="this","sample"] )
+
+as.character( colData(dxd2)[colData(dxd2)$tissue %in% tissues &
+                            colData(dxd2)$individual %in% individual &
+                            colData(dxd2)$exon=="this","tissue"] )
+
+transcriptDb <- loadDb( file.path(
+        system.file("extdata", package="HumanDEU"),
+        "GRCh38.sqlite" ) )
+
+options( ucscChromosomeNames=FALSE )
+geneTrack2 <- GeneRegionTrack( transcriptDb )
+
+path <- Sys.getenv("gtex")
+
+bamFiles <- sapply( samples, function(x){
+                file.path( path, "alignments", x,
+                    sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+} )
+
+data("geneTrack")
+
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi( sampleVec=bamFiles,
+                nameVec=c( "Skin", "Tibial\nnerve", "Skeletal\nmuscle", "Thyroid" ),
+                geneID=opt2, transcriptDb=transcriptDb,
+                geneTrack=geneTrack, offset=100, type="coverage",
+                plotTranscripts=TRUE, covHeight=1,
+                cex=1, sizes=c(1, 1, 1, 1, 1, .5) )
+}
+
+```
+
+We also plot the same gene using the plotDEXSeq function
+
+```{r plotDEXSeq1, fig.height=5, fig.width=7}
+
+dxdSubset <- dxd2[,colData(dxd2)$sample %in% samples]
+plotDEXSeq( dxdSubset, geneID=opt2, norCounts=TRUE,
+           expression=FALSE, displayTranscripts=TRUE,
+           fitExpToVar="tissue", transcriptDb=transcriptDb,
+           legend=TRUE, lwd=2, cex=1.4, cex.axis=1.4 )
+
+```

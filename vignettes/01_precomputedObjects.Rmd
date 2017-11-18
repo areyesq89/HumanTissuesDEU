@@ -1,0 +1,153 @@
+---
+title: "Code to generate the pre-computed objects from the _HumanDEU_ package"
+author: "Alejandro Reyes"
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('HumanDEU')`"
+abstract: >
+  This data package provides pre-computed data objects with relative
+  exon usage coefficients and relative spliced-in coefficients. The
+  reason for this is that the computation of these coefficients
+  is very expensive computationally. We used computational cluster to
+  generate these coefficients in a reasonable amount of time.  This
+  vignette provides the code used to generate these coefficients.
+  However, this vignette only runs the code for the exonic
+  regions of the first gene.
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{HumanDEU}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+
+```{r style, echo=FALSE, results='asis'}
+BiocStyle::markdown()
+```
+
+* Estimating REUCs
+
+Below are the steps that were followed to estimate relative
+exon usage coefficients (REUCs). We load the data objects 
+and extract the indexes of the exonic regions of the first 
+gene. 
+
+```{r reucs}
+
+library( HumanDEU )
+library( DEXSeq )
+data( "dxdObjects" )
+dxd <- dxd1
+gene1Index <-
+    which( mcols( dxd )$groupID %in% "ENSG00000000003" )
+
+```
+
+We fit the model for each exonic region using a large prior 
+for shrinkage and vector of fixed dispersion 
+estimates. We also use a single core for the calculations,
+since we are estimating these for a single gene.  
+
+```{r}
+
+dispThis <- rep( 0.1, length.out = length( gene1Index ) )
+dispOthers <- rep( 0.1, length.out = length( gene1Index ) )
+names( dispThis ) <- rownames( dxd )[gene1Index]
+names( dispOthers ) <- rownames( dxd )[gene1Index]
+testableVector <- rep( TRUE, length( gene1Index ) )
+names( testableVector ) <- rownames( dxd )[gene1Index]
+bjp <- SerialParam()
+
+allCoefsWeakShrinkage <-
+    fitAllExonsParallel(
+        dxd[gene1Index,],
+        dispThis,
+        dispOthers,
+        priorsd=3,
+        bjp )
+
+```
+
+We used these coefficients with weak shrinkage
+to get dispersion estimates for each exonic region.
+
+```{r disps}
+
+rawDisps <-
+    estimateDispersionsParallel(
+        dxd[gene1Index,],
+        allCoefsWeakShrinkage,
+        bjp)
+
+head( rawDisps )
+
+```
+
+Using these dispersion estimates, we run now the fit
+with a smaller prior.
+
+```{r reucs2}
+
+dispThis <- pmax( pmin( rawDisps[,"dispThis"], 10 ), 1e-6 )
+dispOthers <- pmax( pmin( rawDisps[,"dispOthers"], 10 ), 1e-6 )
+
+allCoefsGoodShrinkage <- fitAllExonsParallel(
+    dxd[gene1Index,],
+    dispThis,
+    dispOthers,
+    priorsd=0.05, bjp )
+
+allCoefsSub <-
+    HumanDEU:::arrangeInto3DArray(
+        dxd[gene1Index,],
+        allCoefsGoodShrinkage )
+
+```
+
+We verify that the estimated REUCs are the same
+as in the REUCs in the pre-computed object.
+
+```{r veryfi}
+data("crossCoefs1")
+all( allCoefsSub == crossCoefs1[gene1Index,,] )
+```
+
+* Estimating p-values
+
+As for the REUCs and RSICs, the code below demonstrates the functions
+that were used to test for differential exon usage. Due to long
+running times, we demonstrate the p-value calculation for the exonic
+regions of the first gene.
+
+```{r}
+
+dxd <- dxd1
+
+formulaFull <- ~ sample + exon + sex:exon + individual:exon + tissue:exon
+formulaNull <- ~ sample + exon + sex:exon + individual:exon
+
+disps <- estimateTestDispersionsParallel(
+    dxd[gene1Index,],
+    formula=formulaFull,
+    bjp )
+
+disps <- data.frame(
+    dispThis=disps,
+    dispOthers=disps )
+rownames(disps) <- gsub("\\d\\.", "", rownames(disps))
+
+pvals <- testForDEUParallel(
+    dxd[gene1Index,],
+    formulaNull,
+    formulaFull,
+    disps,
+    testableVector,
+    bjp )
+
+data("pvals1")
+
+all( pvalsTissues1[gene1Index] == pvals )
+
+```
+

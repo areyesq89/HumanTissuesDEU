@@ -1,0 +1,108 @@
+---
+title: "Analysis related to Figure 1"
+author: "Alejandro Reyes"
+date: "`r BiocStyle::doc_date()`"
+package: "`r BiocStyle::pkg_ver('HumanDEU')`"
+output:
+  BiocStyle::html_document:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{HumanDEU}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r style, echo=FALSE, results='asis'}
+BiocStyle::markdown()
+```
+
+This package provides the plotting function plotGeneREUCs that
+draws heatmaps of the relative exon usage coefficients of a gene. 
+Below, we plot the REUCs for the gene _ALAS1_ on subset 1 of the 
+GTEx data.
+
+```{r fig1Alas, fig.height=2.5, fig.width=4}
+
+library( HumanDEU )
+library( ggplot2 )
+library( RColorBrewer )
+
+data("crossCoefs1")
+data("crossCoefsJR1")
+
+opt2 <- "ENSG00000023330"
+plotGeneREUCs(
+    crossCoefs1, opt2,
+    exons=c("E004", "E005", "E006"),
+    colLim=3) +
+    theme(legend.position="top", legend.direction="horizontal",
+          axis.title.y=element_blank()) +
+    xlab("Individual") +
+    guides(fill = guide_colorbar(barwidth = 7,
+               barheight = 0.35, title.position="top"))    
+
+```
+
+We use the same function to plot the RISCs for the same
+exons of the gene _ALAS1_. 
+
+```{r figAlasRISCs, fig.height=1.8, fig.width=5}
+
+plotGeneREUCs(
+    crossCoefsJR1, opt2,
+    exons=c("E004", "E005", "E006") ) +
+    theme( legend.position="right",
+          legend.direction="vertical",
+          axis.title.y=element_blank() ) +
+    xlab("Individual") +
+    guides( fill = guide_colorbar(
+               title="RSIC", barwidth = .5,
+               barheight = 5,
+               title.position="top") )
+```
+
+This package contains a function _plotSashimi_ that inputs
+bam files aligned to the reference genome and plots
+sashimi plots for a given genomic region. Due to data sharing
+policies, however, we are not allowed to redistribute _GTEx_ bam 
+files because these are potentially identifiable data. For 
+this reason, the code below is not evaluated during the 
+compilation of this vignette. 
+
+```{r sashimiAlas, fig.height=3, fig.width=3.5}
+
+library(DESeq2)
+library(GenomicFeatures)
+
+data("dxdObjects")
+data("geneTrack")
+
+sample1 <- "SRR1322163"
+sample2 <- "SRR1317344"  
+individual <-
+    as.character( colData( dxd1 )[ colData(dxd1)$sample %in% sample1,"individual"][1])
+
+individual
+
+transcriptDb <- loadDb( file.path(
+    system.file("extdata", package="HumanDEU"),
+    "GRCh38.sqlite" ) )
+
+path <- Sys.getenv("gtex")
+bamFiles <- sapply( c(sample1, sample2), function(x){
+    file.path( path, "alignments", x,
+          sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+    } )
+
+options( ucscChromosomeNames=FALSE )
+
+if(  all( file.exists(bamFiles) ) ){
+plotSashimi( bamFiles,
+    nameVec=c("Cerebellum", "Cortex"),
+    transcriptDb=transcriptDb, geneTrack=geneTrack,
+    transcriptIntrons=c("ENST00000469224", "ENST00000484952"),
+    coords=GRanges("3", IRanges(start=52198144, end=52199220)) )
+}
+
+```
+
