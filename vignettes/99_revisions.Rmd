@@ -194,6 +194,7 @@ bamFiles <- sapply( samples, function(x){
     file.path( path, "alignments", x,
         sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
 } )
+
 if(  all( file.exists(bamFiles) ) ){
     png("sup2_guerrero2017_sashimi_NDUFV3subB.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
@@ -206,7 +207,7 @@ if(  all( file.exists(bamFiles) ) ){
 }
 
 ind <- levels( colData(dxd3)$individual )[3]
-ind
+
 samples <- HumanDEU:::getSampleIdentifiers(
           c("Artery - Aorta", "Heart - Left Ventricle"),
           ind, dxd3 )
@@ -215,6 +216,7 @@ bamFiles <- sapply( samples, function(x){
     file.path( path, "alignments", x,
         sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
 } )
+
 if(  all( file.exists(bamFiles) ) ){
     png("sup2_guerrero2017_sashimi_NDUFV3subC.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
@@ -243,14 +245,12 @@ plotGeneREUCs( crossCoefsJR1, geneName="ENSG00000127990", exons=c("E006")) +
 dev.off()
 
 ind <- levels( colData(dxd1)$individual )[1]
-ind
 samples <- HumanDEU:::getSampleIdentifiers(
           c("Brain - Cerebellum", "Brain - Hippocampus"),
           ind, dxd1 )
 
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000127990" &
                  geneTrack@range$exon %in% c("E005", "E008"),] )
-coords
 
 path <- Sys.getenv("gtex")
 bamFiles <- sapply( samples, function(x){
@@ -258,7 +258,6 @@ bamFiles <- sapply( samples, function(x){
         sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
 } )
 
-getwd()
 if(  all( file.exists(bamFiles) ) ){
     png("sup2_ritz2010_sashimi_SGCE.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
@@ -295,8 +294,6 @@ plotGeneREUCs( crossCoefsJR3, geneName="ENSG00000197879", exons=c("E053", "E061"
 dev.off()
 
 ind <- levels( colData(dxd3)$individual )[40]
-ind
-levels( colData(dxd3)$tissue )
 samples <- HumanDEU:::getSampleIdentifiers(
           c( "Heart - Left Ventricle", "Pancreas" ),
           ind, dxd3 )
@@ -335,13 +332,9 @@ dplyr:::filter( resultsDF, label == "subsetB",
                tdu > 1 )[,c("tdu", "padj")]
 
 ind <- levels( colData(dxd2)$individual )[1]
-ind
 samples <- HumanDEU:::getSampleIdentifiers(
           c( "Muscle - Skeletal", "Esophagus - Mucosa"),
           ind, dxd2 )
-#dxdSub <- dxd2[,colData( dxd2 )$sample %in% samples]
-#plotDEXSeq( dxdSub, "ENSG00000165629", fitExpToVar="tissue", norCounts=TRUE, expression=FALSE, splicing=FALSE, transcriptDb=transcriptDb, legend=TRUE, displayTranscripts=TRUE)
-#dev.off()
 
 png("sup2_hayakawa2001_reucs_ATP5C1.png", res=300, width=3.6, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR2, "ENSG00000165629", exons="E021")+
@@ -368,7 +361,6 @@ if(  all( file.exists(bamFiles) ) ){
                 transcriptDb=transcriptDb, geneTrack=geneTrack,
                 coords=coords, #highlight=c( "E021" ),
                 highlight=rng,
-#                transcriptIntrons=c("ENST00000438665", "ENST00000359786","ENST00000361007"),
                 sizes=c(1, 1, .5, .4) )
     dev.off()
 }
@@ -387,7 +379,6 @@ res <- dplyr:::filter( resultsDF, label == "subsetB",
                gene == "ENSG00000151150",
                padj < 0.1,
                tdu > 1 )
-head( sort( res$tdu, decreasing=TRUE ), 8 )
 
 exns <- as.character( res[head(order( res$tdu, decreasing=TRUE ), 8),"exon"] )
 
@@ -406,7 +397,6 @@ plotGeneREUCs( crossCoefsJR2, "ENSG00000151150", exons="E067" ) +
 dev.off()
 
 ind <- levels( colData(dxd2)$individual )[1]
-ind
 samples <- HumanDEU:::getSampleIdentifiers(
           c( "Muscle - Skeletal", "Nerve - Tibial"),
           ind, dxd2 )
@@ -435,8 +425,6 @@ coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG0000015115
                  geneTrack@range$exon %in% c("E065", "E070"),] )
 rn <- rowRanges(dxd2)["ENSG00000151150:E067",]
 
-#start(rn) <- start(rn) - 30
-#end( rn ) <- end( rn ) + 30                
 if(  all( file.exists(bamFiles) ) ){
     png("sup2_hopitzan2005_sashimi_ANK3_2.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
@@ -472,7 +460,6 @@ plotGeneREUCs( crossCoefsJR2, "ENSG00000081189",
 dev.off()
 
 ind <- levels( colData(dxd2)$individual )[1]
-ind
 samples <- HumanDEU:::getSampleIdentifiers(
           c( "Muscle - Skeletal", "Thyroid"),
           ind, dxd2 )
@@ -486,7 +473,6 @@ coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG0000008118
                  geneTrack@range$exon %in% c("E031", "E037"),] )
 start(coords) <- start( coords ) - 2500
 end(coords) <- end( coords ) + 2500
-coords
 if(  all( file.exists(bamFiles) ) ){
     png("sup2_hakim2010_sashimi_MEF2C.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
@@ -514,7 +500,6 @@ plotGeneREUCs( crossCoefsJR1, "ENSG00000141068", exons=c("E045", "E046"))
 dev.off()
 
 ind <- levels( colData(dxd1)$individual )[7]
-ind
 samples <- HumanDEU:::getSampleIdentifiers(
           c( "Brain - Cerebellum", "Brain - Caudate (basal ganglia)"),
           ind, dxd1 )
@@ -538,10 +523,5 @@ if(  all( file.exists(bamFiles) ) ){
     dev.off()
 }
 
-
-#dxdSub <- dxd1[,colData( dxd1 )$sample %in% samples]
-#plotDEXSeq( dxdSub, "ENSG00000141068", fitExpToVar="tissue", norCounts=TRUE, expression=FALSE, splicing=FALSE, transcriptDb=transcriptDb, legend=TRUE, displayTranscripts=TRUE)
-#dev.off()
-#getwd()
 ```
 
