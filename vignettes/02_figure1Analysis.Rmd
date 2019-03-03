@@ -1,7 +1,7 @@
 ---
 title: "Analysis related to Figure 1"
 author: "Alejandro Reyes"
-date: "`r BiocStyle::doc_date()`"
+date: "2017"
 package: "`r BiocStyle::pkg_ver('HumanDEU')`"
 output:
   BiocStyle::html_document:
@@ -9,11 +9,16 @@ output:
 vignette: >
   %\VignetteIndexEntry{HumanDEU}
   %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+  %\usepackage[utf8]{inputenc}
 ---
 
-```{r style, echo=FALSE, results='asis'}
-BiocStyle::markdown()
+```{r echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache = FALSE,
+                      dev = "png",
+                      message = FALSE,
+                      error = FALSE,
+                      warning = TRUE)
 ```
 
 This package provides the plotting function plotGeneREUCs that
@@ -39,7 +44,7 @@ plotGeneREUCs(
           axis.title.y=element_blank()) +
     xlab("Individual") +
     guides(fill = guide_colorbar(barwidth = 7,
-               barheight = 0.35, title.position="top"))    
+               barheight = 0.35, title.position="top"))
 
 ```
 
@@ -78,7 +83,7 @@ data("dxdObjects")
 data("geneTrack")
 
 sample1 <- "SRR1322163"
-sample2 <- "SRR1317344"  
+sample2 <- "SRR1317344" 
 individual <-
     as.character( colData( dxd1 )[ colData(dxd1)$sample %in% sample1,"individual"][1])
 

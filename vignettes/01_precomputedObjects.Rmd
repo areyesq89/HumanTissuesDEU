@@ -1,7 +1,7 @@
 ---
 title: "Code to generate the pre-computed objects from the _HumanDEU_ package"
 author: "Alejandro Reyes"
-date: "`r BiocStyle::doc_date()`"
+date: "2017"
 package: "`r BiocStyle::pkg_ver('HumanDEU')`"
 abstract: >
   This data package provides pre-computed data objects with relative
@@ -16,17 +16,22 @@ output:
   BiocStyle::html_document:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{HumanDEU}
+  %\VignetteIndexEntry{HumanDEU 1}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
 
-
-```{r style, echo=FALSE, results='asis'}
-BiocStyle::markdown()
+```{r echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache = FALSE,
+                      dev = "png",
+                      message = FALSE,
+                      error = FALSE,
+                      warning = TRUE)
 ```
 
-* Estimating REUCs
+
+# Estimating REUCs
 
 Below are the steps that were followed to estimate relative
 exon usage coefficients (REUCs). We load the data objects 
@@ -113,7 +118,7 @@ data("crossCoefs1")
 all( allCoefsSub == crossCoefs1[gene1Index,,] )
 ```
 
-* Estimating p-values
+# Estimating p-values
 
 As for the REUCs and RSICs, the code below demonstrates the functions
 that were used to test for differential exon usage. Due to long

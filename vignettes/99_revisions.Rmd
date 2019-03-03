@@ -1,19 +1,25 @@
 ---
 title: "Revisions"
 author: "Alejandro Reyes"
-date: "`r BiocStyle::doc_date()`"
+date: "2017"
 package: "`r BiocStyle::pkg_ver('HumanDEU')`"
 output:
-  BiocStyle::html_document:
+  rmarkdown::html_document:  
     toc: true
+<!-- bibliography: references.bib) --> 
 vignette: >
-  %\VignetteIndexEntry{HumanDEU}
+  %\VignetteIndexEntry{HumanDEU revisions}
   %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+  %\usepackage[utf8]{inputenc}
 ---
 
-```{r style, echo=FALSE, results='asis'}
-BiocStyle::markdown()
+```{r echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache = FALSE,
+                      dev = "png",
+                      message = FALSE,
+                      error = FALSE,
+                      warning = TRUE)
 ```
 
 ```{r}
@@ -31,28 +37,25 @@ transcriptDb <- loadDb( file.path(
         "GRCh38.sqlite" ) )
 ```
 
-* Plot coefficients of known exon skipping events
+# Plot coefficients of known exon skipping events
 
-** ATP11B
+## ATP11B
  
-[@Clark_2017] reported a exon-skipping event of the gene ATP11B using
+[@Clark2017] reported a exon-skipping event of the gene ATP11B using
 both qPCR and microarray data. Figure 5 of that paper shows RT-PCR 
 profiles of several tissues, where Heart and Stomach (which are tissues
 also present in subset C of _GTEx_) display differential splicing of 
 this exon. 
 
-```{r reucsATP11B, fig.height=1.8, fig.width=5}
+```{r reucsATP11B, fig.height=1.8, fig.width=3.5}
 
 dplyr:::filter(resultsDF, label=="subsetC",
                gene == "ENSG00000058063",
                tdu > 1, padj < 0.1 )[,c("padj", "tdu")]
 
-png("sup2_clark2007_reucs_ATP11B.png", res=300, width=3.5, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR3, "ENSG00000058063", exons=c("E039") ) +
     facet_wrap( ~exon, nrow=1 ) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
-
 
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000058063" &
                  geneTrack@range$exon %in% c("E038", "E039", "E040", "E041", "E042"),] )
@@ -60,6 +63,9 @@ start( coords ) <- start( coords ) - 100
 end( coords ) <- end( coords ) + 100
 
 ind <- levels( colData(dxd3)$individual )[32]
+```
+
+```{r reucsATP11B_2, fig.width=3.5, fig.height=2.5}
 
 samples <- HumanDEU:::getSampleIdentifiers(
           c("Heart - Left Ventricle", "Stomach"),
@@ -71,69 +77,77 @@ bamFiles <- sapply( samples, function(x){
 } )
  
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_clark2007_sashimi_ATP11B.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_clark2007_sashimi_ATP11B.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000058063",
                 nameVec=c("Heart", "Stomach"),
                 transcriptDb=transcriptDb, geneTrack=geneTrack, highlightOffset=200,
                 coords=coords, highlight="E039", offset=0, plotTranscripts=FALSE,
                 sizes=c(1, 1, .5, .3), rnaYLim=list(c(0, 35), c(0, 55) ) )
-    dev.off()
+#    dev.off()
 }
 
 ```
+
+## TPD52
 
 In the same figure of the same paper, [@Clark2007] shows that
 two exons of the gene TPD52 are differentially spliced between
 heart and stomach tissue. We found the same patterns in the
 GTEx data.
 
-```{r reucsTPD52}
+```{r reucsTPD52, fig.width=4.2, fig.height=1.8}
 
 dplyr:::filter(resultsDF, label=="subsetC",
                gene == "ENSG00000076554",
                exon %in% c("E014", "E015"),
                tdu > 1, padj < 0.1 )[,c("padj", "tdu")]
 
-png("sup2_clark2007_reucs_TPD52.png", res=300, width=4.2, height=1.8, unit="in")
+#png("sup2_clark2007_reucs_TPD52.png", res=300, width=4.2, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR3, "ENSG00000076554", exons=c("E014", "E015") ) +
     facet_wrap( ~exon, nrow=1 ) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+#dev.off()
+```
 
+```{r, fig.width=3.5, fig.height=2.5}
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000076554" &
                  geneTrack@range$exon %in% c("E012", "E016"),] )
 start( coords ) <- start( coords ) - 1600
 end( coords ) <- end( coords ) + 170
 
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_clark2007_sashimi_TPD52.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_clark2007_sashimi_TPD52.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000076554",
                 nameVec=c("Heart", "Stomach"),
                 transcriptDb=transcriptDb, geneTrack=geneTrack,
                 coords=coords, highlight=c( "E014", "E015" ), highlightOffset=100, offset=0, plotTranscripts=TRUE,
                 sizes=c(1, 1, .5, .4), lwd.sashimiMax=1, collapseTranscripts="meta")
-    dev.off()
+#    dev.off()
 }
 
 ```
 
+## SLC25A3
+
 Example of the gene SLC25A3 of figure 1 from  [Wang_2008].
 
-```{r reucsSLC25A3}
+```{r reucsSLC25A3, fig.width=4, fig.height=1.8}
 
 dplyr:::filter(resultsDF, label=="subsetC",
                gene == "ENSG00000075415",
                exon %in% c("E014", "E016"),
                tdu > 1, padj < 0.1 )[,c("padj", "tdu")]
 
-png("sup2_wang2008_reucs_SLC25A3.png", res=300, width=4, height=1.8, unit="in")
+#png("sup2_wang2008_reucs_SLC25A3.png", res=300, width=4, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR3, "ENSG00000075415", exons=c("E014", "E016") ) +
     facet_wrap( ~exon, nrow=1 ) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+#dev.off()
+```
 
+```{r reucsSLC25A3_2, fig.width=3.5, fig.height=2.5}
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000075415" &
                  geneTrack@range$exon %in% c("E012", "E017"),] )
 
@@ -148,7 +162,7 @@ bamFiles <- sapply( samples, function(x){
         sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
 } )
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_wang2008_sashimi_SLC25A3.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_wang2008_sashimi_SLC25A3.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000075415",
                 nameVec=c("Colon", "Heart"),
@@ -156,14 +170,16 @@ if(  all( file.exists(bamFiles) ) ){
                 coords=coords, highlight=c( "E014", "E016" ), offset=0, 
                 sizes=c(1, 1, .5, .4), lwd.sashimiMax=2.5,
                 transcriptIntrons=c("ENST00000401722", "ENST00000228318"))
-    dev.off()
+#    dev.off()
 }
 ```
+
+## NDUFV3
 
 [@Guerrero_Castillo_2017] described the expression of a long and a short
 version of the isoform 
 
-```{r reucsNDUFV3}
+```{r reucsNDUFV3, fig.width=4, fig.height=1.8}
 
 dplyr:::filter(resultsDF, label == "subsetC",
                gene == "ENSG00000160194",
@@ -172,20 +188,23 @@ dplyr:::filter(resultsDF, label=="subsetB",
                gene == "ENSG00000160194",
                exon %in% c("E008", "E009"))[,c("padj", "tdu")]
 
-png("sup2_guerrero2017_reucs_NDUFV3subB.png", res=300, width=4, height=1.8, unit="in")
+#png("sup2_guerrero2017_reucs_NDUFV3subB.png", res=300, width=4, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR2, geneName="ENSG00000160194", exons=c("E008", "E009") ) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
-png("sup2_guerrero2017_reucs_NDUFV3subC.png", res=300, width=4, height=1.8, unit="in")
+#dev.off()
+#png("sup2_guerrero2017_reucs_NDUFV3subC.png", res=300, width=4, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR3, geneName="ENSG00000160194", exons=c("E008", "E009") ) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+#dev.off()
 
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000160194" &
                  geneTrack@range$exon %in% c("E007", "E010"),] )
 
 ind <- levels( colData(dxd2)$individual )[2]
 ind
+```
+
+```{r reucsNDUFV3_2, fig.width=3.5, fig.height=2.5} 
 samples <- HumanDEU:::getSampleIdentifiers(
           c("Lung", "Muscle - Skeletal"),
           ind, dxd2 )
@@ -196,14 +215,14 @@ bamFiles <- sapply( samples, function(x){
 } )
 
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_guerrero2017_sashimi_NDUFV3subB.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_guerrero2017_sashimi_NDUFV3subB.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000160194",
                 nameVec=c("Lung", "Muscle - Skeletal"),
                 transcriptDb=transcriptDb, geneTrack=geneTrack,
                 coords=coords, highlight=c( "E008", "E009" ), offset=0, 
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
 
 ind <- levels( colData(dxd3)$individual )[3]
@@ -218,20 +237,22 @@ bamFiles <- sapply( samples, function(x){
 } )
 
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_guerrero2017_sashimi_NDUFV3subC.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_guerrero2017_sashimi_NDUFV3subC.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000160194",
                 nameVec=c("Artery", "Heart"),
                 transcriptDb=transcriptDb, geneTrack=geneTrack,
                 coords=coords, highlight=c( "E008", "E009" ), offset=0, 
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
 ```
 
+## SGCE 
+
 [@Ritz_2010] example of an exon included mainly in cerebellum.
 
-```{r reucsSGCE}
+```{r reucsSGCE, fig.width=3.5, fig.height=1.8}
 
 dplyr:::filter( resultsDF, label == "subsetA",
                gene == "ENSG00000127990",
@@ -239,10 +260,14 @@ dplyr:::filter( resultsDF, label == "subsetA",
                exon %in% c("E006"),
                tdu > 1 )
 
-png("sup2_ritz2010_reucs_SGCE.png", res=300, width=3.5, height=1.8, unit="in")
+#png("sup2_ritz2010_reucs_SGCE.png", res=300, width=3.5, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR1, geneName="ENSG00000127990", exons=c("E006")) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+#dev.off()
+
+```
+
+```{r reucsSGCE_2, fig.width=3.5, fig.height=2.5}
 
 ind <- levels( colData(dxd1)$individual )[1]
 samples <- HumanDEU:::getSampleIdentifiers(
@@ -259,24 +284,26 @@ bamFiles <- sapply( samples, function(x){
 } )
 
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_ritz2010_sashimi_SGCE.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_ritz2010_sashimi_SGCE.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000127990",
                 nameVec=c("Cerebellum", "Hippocampus"),
                 transcriptDb=transcriptDb, geneTrack=geneTrack,
                 coords=coords, highlight=c( "E006" ), highlightOffset=50, 
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
 
 ```
+
+## MYO1C
 
 [@Sielski_2014] reported the usage of an alternative 5' exons
 for the gene MYO1C. Exon E053 (labeled "Exon -1" in that paper 
 that translated the peptide MRYRA) tissue-dependent usage based 
 than the RT-PCR presented in their Figure 1.
 
-```{r reucsMYO1C}
+```{r reucsMYO1C, fig.width=4.2, fig.height=1.8}
 
 dplyr:::filter( resultsDF, label == "subsetC",
                gene == "ENSG00000197879",
@@ -284,15 +311,17 @@ dplyr:::filter( resultsDF, label == "subsetC",
                exon %in% c( "E053", "E061" ),
                tdu > 1 )[,c("tdu", "padj")]
 
-png("sup2_sielski2013_reucs_MYO1C.png", res=300, width=4.2, height=1.8, unit="in")
+#png("sup2_sielski2013_reucs_MYO1C.png", res=300, width=4.2, height=1.8, unit="in")
 plotGeneREUCs( crossCoefs3, geneName="ENSG00000197879", exons=c("E053", "E061") ) +
     guides( fill = guide_colorbar( title="REUC" ) )
-dev.off()
-png("sup2_sielski2013_rsics_MYO1C.png", res=300, width=4.2, height=1.8, unit="in")
+#dev.off()
+#png("sup2_sielski2013_rsics_MYO1C.png", res=300, width=4.2, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR3, geneName="ENSG00000197879", exons=c("E053", "E061") ) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+#dev.off()
+```
 
+```{r reucsMYO1C_2, fig.width=3.5, fig.height=2.5}
 ind <- levels( colData(dxd3)$individual )[40]
 samples <- HumanDEU:::getSampleIdentifiers(
           c( "Heart - Left Ventricle", "Pancreas" ),
@@ -307,7 +336,7 @@ bamFiles <- sapply( samples, function(x){
         sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
 } )
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_sielski2013_sashimi_MYO1C.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_sielski2013_sashimi_MYO1C.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000197879",
                 nameVec=c("Heart", "Pancreas"),
@@ -315,15 +344,18 @@ if(  all( file.exists(bamFiles) ) ){
                 coords=coords, highlight=c( "E053" ), offset=0, highlightOffset=70,
                 transcriptIntrons=c("ENST00000438665", "ENST00000359786","ENST00000361007"),
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
 
 ```
+
+## ATP5C1
+
 [@Hayakawa_2001] reported an exon that is specifically excluded in
 muscle tissues as compared to non-muscle tissues for an exon
 of the gene ATP5C1.
 
-```{r ATP5C1}
+```{r ATP5C1, fig.width=3.6, fig.height=1.8}
 
 dplyr:::filter( resultsDF, label == "subsetB",
                gene == "ENSG00000165629",
@@ -336,13 +368,17 @@ samples <- HumanDEU:::getSampleIdentifiers(
           c( "Muscle - Skeletal", "Esophagus - Mucosa"),
           ind, dxd2 )
 
-png("sup2_hayakawa2001_reucs_ATP5C1.png", res=300, width=3.6, height=1.8, unit="in")
+#png("sup2_hayakawa2001_reucs_ATP5C1.png", res=300, width=3.6, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR2, "ENSG00000165629", exons="E021")+
         guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+#dev.off()
 
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000165629" &
-                 geneTrack@range$exon %in% c("E020", "E022"),] )
+                                 geneTrack@range$exon %in% c("E020", "E022"),] )
+
+```
+
+```{r ATP5C1_2, fig.width=3.5, fig.height=2.5}
 
 rng <- rowRanges( dxd2 )["ENSG00000165629:E021",]
 start(rng) <- start(rng) - 50
@@ -354,7 +390,7 @@ bamFiles <- sapply( samples, function(x){
         sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
 } )
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_hayakawa2001_sashimi_ATP5C1.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_hayakawa2001_sashimi_ATP5C1.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000165629",
                 nameVec=c("Muscle", "Esophagus"),
@@ -362,10 +398,12 @@ if(  all( file.exists(bamFiles) ) ){
                 coords=coords, #highlight=c( "E021" ),
                 highlight=rng,
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
 
 ```
+
+## ANK3
 
 [@Hopitzan_2005] reported muscle-specific isoform expression
 of the gene Ankyrin-3. This is an example of a strong isoform
@@ -373,7 +411,7 @@ switch where most exons are used in a tissue-dependent manner
 due to a combination of alternative splicing and alternative
 transcriptional events.
 
-```{r ANK3}
+```{r ANK3, fig.width=6.5, fig.height=4}
 
 res <- dplyr:::filter( resultsDF, label == "subsetB",
                gene == "ENSG00000151150",
@@ -385,16 +423,22 @@ exns <- as.character( res[head(order( res$tdu, decreasing=TRUE ), 8),"exon"] )
 nrow( dplyr:::filter( resultsDF, label == "subsetB",
                gene == "ENSG00000151150" ) )
 
-png("sup2_hopitzan2005_reucs_ANK3.png", res=300, width=6.5, height=4, unit="in")
+#png("sup2_hopitzan2005_reucs_ANK3.png", res=300, width=6.5, height=4, unit="in")
 plotGeneREUCs( crossCoefs2, "ENSG00000151150", exons=exns ) +
-    facet_wrap( ~exon, nrow=2 ) 
-dev.off()
+    facet_wrap( ~exon, nrow=2 )
+#dev.off()
+```
 
-png("sup2_hopitzan2005_rsics_ANK3.png", res=300, width=3.6, height=1.8, unit="in")
+```{r ANK3b, fig.width=3.6, fig.height=1.8}
+
+#png("sup2_hopitzan2005_rsics_ANK3.png", res=300, width=3.6, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR2, "ENSG00000151150", exons="E067" ) +
     facet_wrap( ~exon, nrow=2 ) +
     guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+                                        #dev.off()
+```
+
+```{r ANK3_2, fig.width=3.5, fig.height=2.5}
 
 ind <- levels( colData(dxd2)$individual )[1]
 samples <- HumanDEU:::getSampleIdentifiers(
@@ -409,7 +453,7 @@ bamFiles <- sapply( samples, function(x){
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000151150" &
                  geneTrack@range$exon %in% c("E002", "E101"),] )
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_hopitzan2005_sashimi_ANK3_1.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_hopitzan2005_sashimi_ANK3_1.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000151150",
                 nameVec=c("Muscle", "Nerve"),
@@ -418,7 +462,7 @@ if(  all( file.exists(bamFiles) ) ){
                 offset=0, type="coverage",
                 rnaYLim=list(c(0, 55), c(0, 100)),
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
 
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000151150" &
@@ -426,7 +470,7 @@ coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG0000015115
 rn <- rowRanges(dxd2)["ENSG00000151150:E067",]
 
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_hopitzan2005_sashimi_ANK3_2.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_hopitzan2005_sashimi_ANK3_2.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000151150",
                 nameVec=c("Muscle", "Nerve"),
@@ -435,15 +479,16 @@ if(  all( file.exists(bamFiles) ) ){
                 highlightOffset=100,
                 #offset=10, 
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
-
 ```
+
+## MEF2C
 
 [@Hakim_2010] reported using RT-PCR a mutually exclusive splicing
 event that was exclusive to skeletal muscle. 
 
-```{r reucsMEF2C}
+```{r reucsMEF2C, fig.width=6.5, fig.height=4}
 
 dplyr:::filter( resultsDF, label == "subsetB",
                gene == "ENSG00000081189",
@@ -452,12 +497,15 @@ dplyr:::filter( resultsDF, label == "subsetB",
                exon %in% c("E031", "E032", "E033", "E034", "E035", "E036", "E037")
                )[c("padj", "tdu")]
 
-png("sup2_hakim2010_rsics_MEF2C.png", res=300, width=6.5, height=4, unit="in")
+#png("sup2_hakim2010_rsics_MEF2C.png", res=300, width=6.5, height=4, unit="in")
 plotGeneREUCs( crossCoefsJR2, "ENSG00000081189",
               exons=c("E031", "E032", "E033", "E034", "E035", "E036", "E037") ) +
         facet_wrap( ~ exon, nrow=2 ) +
         guides( fill = guide_colorbar( title="RSIC" ) )
-dev.off()
+#dev.off()
+```
+
+```{r reucsMEF2C_2, fig.width=3.5, fig.height=2.5}
 
 ind <- levels( colData(dxd2)$individual )[1]
 samples <- HumanDEU:::getSampleIdentifiers(
@@ -474,7 +522,7 @@ coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG0000008118
 start(coords) <- start( coords ) - 2500
 end(coords) <- end( coords ) + 2500
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_hakim2010_sashimi_MEF2C.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_hakim2010_sashimi_MEF2C.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000081189",
                 nameVec=c("Muscle", "Thyroid"),
@@ -482,11 +530,14 @@ if(  all( file.exists(bamFiles) ) ){
                 coords=coords, highlight=c("E031", "E037"),
                 offset=20, lwd.sashimiMax=1.2, sashimiHeight=.1,
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
+
 ```
 
-```{r }
+## KSR1
+
+```{r KSR1, fig.width=4.2, fig.height=1.8}
 
 dplyr:::filter( resultsDF, label == "subsetA",
                gene == "ENSG00000141068",
@@ -495,9 +546,12 @@ dplyr:::filter( resultsDF, label == "subsetA",
                exon %in% c("E045", "E046"),
                tdu > 1 )[,c("tdu", "padj")]
 
-png("sup2_muller2000_rsics_KSR1.png", res=300, width=4.2, height=1.8, unit="in")
+#png("sup2_muller2000_rsics_KSR1.png", res=300, width=4.2, height=1.8, unit="in")
 plotGeneREUCs( crossCoefsJR1, "ENSG00000141068", exons=c("E045", "E046"))
-dev.off()
+                                        #dev.off()
+```
+
+```{r KSR1_2, fig.width=3.5, fig.height=2.5}
 
 ind <- levels( colData(dxd1)$individual )[7]
 samples <- HumanDEU:::getSampleIdentifiers(
@@ -512,7 +566,7 @@ bamFiles <- sapply( samples, function(x){
 coords <- range( geneTrack@range[geneTrack@range$transcript %in% "ENSG00000141068" &
                  geneTrack@range$exon %in% c("E041", "E047"),] )
 if(  all( file.exists(bamFiles) ) ){
-    png("sup2_muller2000_sashimi_KSR1.png", res=300, width=3.5, height=2.5, unit="in")
+#    png("sup2_muller2000_sashimi_KSR1.png", res=300, width=3.5, height=2.5, unit="in")
     plotSashimi( bamFiles,
                 geneID="ENSG00000141068",
                 nameVec=c("Cerebellum", "Caudate"),
@@ -520,8 +574,9 @@ if(  all( file.exists(bamFiles) ) ){
                 coords=coords, highlight=c("E045", "E046"),
                 offset=20, #lwd.sashimiMax=1.2, sashimiHeight=.1,
                 sizes=c(1, 1, .5, .4) )
-    dev.off()
+#    dev.off()
 }
 
 ```
+
 

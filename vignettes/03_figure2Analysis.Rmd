@@ -1,22 +1,27 @@
 ---
 title: "Analysis related to Figure 2"
 author: "Alejandro Reyes"
-date: "`r BiocStyle::doc_date()`"
+date: "2017"
 package: "`r BiocStyle::pkg_ver('HumanDEU')`"
 output:
   BiocStyle::html_document:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{HumanDEU}
+  %\VignetteIndexEntry{HumanDEU fig2}
   %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+  %\usepackage[utf8]{inputenc}
 ---
 
-```{r style, echo=FALSE, results='asis'}
-BiocStyle::markdown()
+```{r echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache = FALSE,
+                      dev = "png",
+                      message = FALSE,
+                      error = FALSE,
+                      warning = FALSE)
 ```
 
-* Exon statistics
+# Exon statistics
 
 We attach the libraries needed for this vignette. We 
 also load the data object containing gene and 
@@ -253,7 +258,7 @@ print(sup2)
 
 For each gene, we estimate the number of exonic regions
 and the number of base pairs of the union of its exonic 
-regions.  
+regions.
 
 ```{r geneWidth}
 
