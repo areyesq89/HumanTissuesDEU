@@ -8,12 +8,19 @@ differences across human tissues. Nucleic Acids Research, 2017.
 doi: [10.1093/nar/gkx1165](https://www.doi.org/10.1093/nar/gkx1165)
 
 The code is organized as an **R** package containing 6 different vignettes that reproduce 
-different aspects of the manuscript. One contains the code to generated the pre-computed objects
-from this package. Five of the vignettes contain the analyses related to each of the 5 figures of the manuscripts, 
-respectively, and one of them contains the plots generated for the revision of the manuscripts. 
+different aspects of the manuscript:
+
+* Vignette `01_precomputedObjects.Rmd` contains the code to generated the pre-computed objects from this package. 
+* Vignette `02_figure1Analysis.Rmd` contains analyses and code related to figure 1. 
+* Vignette `03_figure2Analysis.Rmd` contains analyses and code related to figure 2.
+* Vignette`04_figure3Analysis.Rmd` contains analyses and code related to figure 3.
+* Vignette `05_figure4Analysis.Rmd` contains analyses and code related to figure 4.
+* Vignette `06_figure5Analysis.Rmd` contains analyses and code related to figure 5.
+* Vignette `99_revisions.Rmd` contains plots that were generated to convince reviewers to accept our paper.
+
 Since Github repositories have size limits, the **R** data objects of this package were deposited to
 zenodo. In order to reproduce the results of the manuscript, you will have to build this package by 
-follow the next steps:
+following the next steps:
 
 1. Clone this repository:
 
@@ -23,3 +30,4 @@ follow the next steps:
 
 4. Build and install the package
 
+Now you should be able to open each vignette and reproduce each figure. If you run into any problem, please send me an e-mail and I will try to respond shortly.  
