@@ -3422,6 +3422,7 @@ plotGeneREUCs( crossCoefs1, "ENSG00000186868" )
       c("Brain - Cerebellum", "Brain - Frontal Cortex (BA9)"),
       "GTEX-12ZZX", dxd1 )
   tissuesFantom <- c("Cerebellum", "Cortex")
+
   png( file.path( path, "plots", "Fig4_gas7_allSashimi.png" ),
       res=300, height=3, width=3.5, unit="in" )
   plotSashimi( samples,
@@ -3434,6 +3435,7 @@ plotGeneREUCs( crossCoefs1, "ENSG00000186868" )
               fantomObject=fantom1, fantomTissues=tissuesFantom,
               fantomLabs=c("Cerebellum\nTSS", "Cortex\nTSS") )
   dev.off()
+
   pdf( file.path( path, "plots", "Fig4_gas7_allSashimi.pdf" ),
       height=3, width=3.5 )
   plotSashimi( samples,
@@ -3446,6 +3448,7 @@ plotGeneREUCs( crossCoefs1, "ENSG00000186868" )
               fantomObject=fantom1, fantomTissues=tissuesFantom,
               fantomLabs=c("Cerebellum\nTSS", "Cortex\nTSS") )
   dev.off()
+
   coords <- range( geneTrack@range[geneTrack@range$transcript %in% pr2 & geneTrack@range$exon %in% c("E026", "E028", "E030"),] )
   start( coords ) <- start( coords ) - 100
   end( coords ) <- end( coords ) + 200
