@@ -1,7 +1,7 @@
 ---
 title: "Analysis related to Figure 4"
 author: "Alejandro Reyes"
-date: "`r BiocStyle::doc_date()`"
+date: "2017"
 package: "`r BiocStyle::pkg_ver('HumanDEU')`"
 output:
   BiocStyle::html_document:
@@ -11,9 +11,288 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
 ---
-					 
-```{r  }
+
+```{r echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache = FALSE,
+                      dev = "png",
+                      message = FALSE,
+                      error = FALSE,
+                      warning = TRUE)
+```
+
+# Analysis of *FANTOM* data
+
+We load the pre-computed fantom count datasets and the libraries required to reproduce this vignette.
+
+```{r loadDat}
+
+library(DEXSeq)
+library(xtable)
+library(HumanDEU)
+
+data("fantomDxd")
+data("resultsGeneTable")
+
+```
+
+We tested for differential promoter usage across tissues using DEXSeq. The code below does not run in the compilation of this vignette (again, because it is computationally expensive). The results are pre-computed in the `fantomDxd`. 
+
+```{r testFantom, eval=FALSE}
+
+fantom1 <- estimateSizeFactors( fantom1 )
+fantom2 <- estimateSizeFactors( fantom2 )
+fantom3 <- estimateSizeFactors( fantom3 )
+fantom1 <- estimateDispersions( fantom1, BPPARAM=BPPARAM )
+fantom2 <- estimateDispersions( fantom2, BPPARAM=BPPARAM )
+fantom3 <- estimateDispersions( fantom3, BPPARAM=BPPARAM )
+fantom1 <- testForDEU( fantom1, BPPARAM=BPPARAM )
+fantom2 <- testForDEU( fantom2, BPPARAM=BPPARAM )
+fantom3 <- testForDEU( fantom3, BPPARAM=BPPARAM )  
+
+```
+
+## Statistics and tables
+
+Then, we calculate the overlap between the genes with exon usage differences across tissues in the *GTex* dataset and the genes with differential promoter usage in the *FANTOM* data.
+
+```{r}
+
+table6 <- sapply( 1:3, function(x){
+    fantomObject <- get( paste0("fantom", x) )
+    deuExons <- paste0( "deuExons", LETTERS[x] )
+    res <- DEXSeqResults( fantomObject )
+    testedGenes <- unique( res$groupID[!is.na( res$pvalue )] )
+    dTssGenes <- unique( res$groupID[which(res$padj < 0.1)] )
+    tdeuGenes <- rownames(exonsPerGene)[exonsPerGene[,deuExons] > 0]
+    b <- sum( testedGenes %in% tdeuGenes )
+    f <- sum( dTssGenes %in% tdeuGenes )
+    mat <- rbind(
+        c( f, length(dTssGenes) - f ),
+        c( b, length(testedGenes) - b ) )
+    ft <- fisher.test(mat)
+    list(
+        `Cell-types` = paste( levels( fantomObject$tissue ), collapse=", "),
+        `# genes` = length( testedGenes ),
+        `# TDEU` = length( tdeuGenes ),
+        `# dTSS` = length( dTssGenes ),
+        `# dTSS and TDEU` = f,
+        `% dTSS and TDEU` = round( 100 * f / length( dTssGenes )),
+        `Odds ratio` = ft$estimate,
+        `P-value` = ft$p.value )
+})
+
+table6 <- t( table6 )
+rownames( table6 ) <- LETTERS[1:3]
+table6
+
+print( xtable( table6, display=c("s", "s", "d", "d", "d", "d", "d", "f", "e"),
+                       caption="Overlap between genes with differential transcriptional
+  start sites usage and genes with differential exon usage. Each row shows
+  data for one subset of tissues. The first
+  column contains the cell-types available from the FANTOM consortium for each
+  subset of the GTEx data. The second column shows the number of genes
+  that were tested for differential transcription start site (dTSS) usage.
+  The third column shows the number of genes that were tested for dTSS usage
+  that had tissue-dependent exon usage (TDEU). The fourth column
+  shows the number of genes with dTSS usage at a FDR of 10\\%. The fifth column
+  shows the number of genes with dTSS usage that were also detected to have
+  TDEU. The sixth column shows the percentage of genes with
+  dTSS that were also detected to have TDEU. The seventh column shows odds
+  ratios and the eighth column shows p-values from Fisher's exact tests.",
+  label="tabS:table6",
+  align=c("p{0.02\\textwidth}", "p{0.2\\textwidth}", "p{0.06\\textwidth}",
+          "p{0.06\\textwidth}", "p{0.06\\textwidth}", "p{0.06\\textwidth}",
+          "p{0.06\\textwidth}", "p{0.06\\textwidth}", "p{0.16\\textwidth}")
+  ),
+  hline.after=c(-1, 0, 1, 2),
+  format.args = list(big.mark = ",", decimal.mark = "."),
+  math.style.exponents = TRUE, digits=2,
+  file= "table6.tex" )
+
+```
+
+## Figures
+
+We load the data objects. 
+
+```{r}
+
+library(dplyr)
+library(cowplot)
+library(ggplot2)
+
+data( "dxdObjects", "crossCoefs1", "crossCoefs2",
+     "crossCoefs3", "crossCoefsJR1", "crossCoefsJR2",
+     "crossCoefsJR3" )
+data("geneTrack")
+
+transcriptDb <- loadDb(
+    file.path( system.file("extdata", package="HumanDEU"),
+              "GRCh38.sqlite" ) )
+
+seqlevelsStyle(fantom1) <- "ENSEMBL"
+seqlevelsStyle(fantom2) <- "ENSEMBL"
+seqlevelsStyle(fantom3) <- "ENSEMBL"
+
+options(ucscChromosomeNames=FALSE)
+
+```
+
+### *GAS7*
+
+```{r figSup_gas7reuc, fig.height=9, fig.width=8}
+
+pr2 <- "ENSG00000007237"
+
+#png( file.path( path, "plots", "figSup_gas7reuc.png" ), res=300,
+#    height=9, width=8, unit="in")
+plotGeneREUCs( crossCoefs1, geneName=pr2, colLim=0.03 )
+#dev.off()
+
+#png( file.path( path, "plots", "figSup_gas7rsic.png" ), res=300,
+#    height=9, width=8, unit="in")
+plotGeneREUCs( crossCoefsJR1, geneName=pr2, colLim=0.03 ) +
+    guides(fill = guide_colorbar(title="RSIC") )
+#dev.off()
+
+```
+
+```{r Fig4_gas7_allSashimi, fig.height=3, fig.width=3.5}
+
+samples <- HumanDEU:::getSampleIdentifiers(
+    c("Brain - Cerebellum", "Brain - Frontal Cortex (BA9)"),
+    "GTEX-12ZZX", dxd1 )
+tissuesFantom <- c("Cerebellum", "Cortex")
+
+#png( file.path( path, "plots", "Fig4_gas7_allSashimi.png" ),
+#    res=300, height=3, width=3.5, unit="in" )
+
+path <- Sys.getenv("gtex")
+bamFiles <- sapply( samples, function(x){
+    file.path( path, "alignments", x,
+              sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+} )
+
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi(
+        bamFiles,
+        nameVec=c("Cerebellum\nRNA", "Cortex\nRNA"),
+        geneID=pr2,
+        transcriptDb=transcriptDb, geneTrack=geneTrack,
+        offset=200, type=c("coverage"),
+        rnaYLim=c(0, 100),
+        cex=1, sizes=c(1.5, 1.5, 1.5, 1.5, 1, .8),
+        fantomObject=fantom1, fantomTissues=tissuesFantom,
+        fantomLabs=c("Cerebellum\nTSS", "Cortex\nTSS") )
+}
+
+coords <- range(
+    geneTrack@range[geneTrack@range$transcript %in% pr2 &
+                    geneTrack@range$exon %in% c("E026", "E028", "E030"),] )
+start( coords ) <- start( coords ) - 100
+end( coords ) <- end( coords ) + 200
+
+#png( file.path( path, "plots", "FigS_gas7_locSashimi.png" ), res=300,
+#    height=3, width=3.5, unit="in")
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi(
+        bamFiles,
+        geneID=pr2,
+        coords=coords,
+        highlight=c("E027", "E028", "E029"),
+        nameVec=c("Cerebellum", "Cortex"),
+        transcriptIntrons=c("ENST00000323816", "ENST00000583882"),
+        transcriptDb=transcriptDb, geneTrack=geneTrack,
+        offset=0, type=c("coverage", "sashimi"),
+        sizes=c(1, 1, .4, .6),
+        plotTranscripts=FALSE )
+}
 
 
+```
+
+### *KRT8*
+
+```{r krt8reuc, fig.height=9.6, fig.width=8}
+
+pr2 <- "ENSG00000170421"
+#png( file.path( path, "plots", "figSup_krt8reuc.png" ),
+#    res=300, height=9.6, width=8, unit="in")
+plotGeneREUCs( crossCoefs2, pr2, colLim=0.02 )
+#dev.off()
+#png( file.path( path, "plots", "figSup_krt8rsic.png" ),
+#    res=300, height=9.6, width=8, unit="in")
+plotGeneREUCs( crossCoefsJR2, pr2, colLim=0.02 ) +
+    guides(fill = guide_colorbar(title="RSIC") )
+#dev.off()
+
+```
+
+```{r krt8sashimis, fig.height=3.2, fig.width=3.5}
+
+samples <- HumanDEU:::getSampleIdentifiers(
+    c("Adipose - Subcutaneous", "Thyroid"),
+    "GTEX-11EI6", dxd2 )
+tissuesFantom <- c("Adipose - Subcutaneous", "Thyroid")
+
+path <- Sys.getenv("gtex")
+bamFiles <- sapply( samples, function(x){
+    file.path( path, "alignments", x,
+              sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+} )
+
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi(
+        bamFiles,
+        nameVec=c("Adipose\nRNA", "Thyroid\nRNA"),
+        geneID=pr2,
+        plotTranscripts=FALSE,
+        transcriptDb=transcriptDb, geneTrack=geneTrack,
+        offset=200, type=c("coverage"), #rnaYLim=c(0, 100),
+        cex=1, sizes=c(1.5, 1.5, 1.5, 1.5, 1, .8),
+        fantomObject=fantom2, fantomTissues=tissuesFantom,
+        fantomLabs=c("Adipose\nTSS", "Thyroid\nTSS") )
+}
+
+```
+
+### NEBL
+
+```{r neblreucs, fig.height=9.6, fig.width=8}
+
+pr2 <- "ENSG00000078114"
+plotGeneREUCs( crossCoefs3, pr2, colLim=0.02 )
+plotGeneREUCs( crossCoefsJR3, pr2, colLim=0.02 ) +
+    guides(fill = guide_colorbar(title="RSIC") )
+
+```
+
+```{r neblsashimi, fig.height=3.2, fig.width=3.5}
+
+tissuesFantom <- c("Heart", "Pancreas")
+samples <- HumanDEU:::getSampleIdentifiers(
+    c( "Heart - Left Ventricle", "Pancreas" ),
+    "GTEX-ZF29", dxd3)
+
+path <- Sys.getenv("gtex")
+bamFiles <- sapply( samples, function(x){
+    file.path( path, "alignments", x,
+              sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+} )
+
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi(
+        bamFiles,
+        nameVec=c("Heart\nRNA", "Pancreas\nRNA"),
+        geneID=pr2,
+        plotTranscripts=FALSE,
+        transcriptDb=transcriptDb, geneTrack=geneTrack,
+        offset=200, type=c("coverage"),
+        rnaYLim=list( c(0, 400), c(0, 10) ),
+        cex=1, sizes=c(1.5, 1.5, 1.5, 1.5, 1, .8),
+        fantomObject=fantom3, fantomTissues=tissuesFantom,
+        fantomLabs=c( "Heart\nTSS", "Pancreas\nTSS") )
+}
 
 ```
