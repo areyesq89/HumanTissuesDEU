@@ -30,4 +30,4 @@ following the next steps:
 
 4. Build and install the package
 
-Now you should be able to open each vignette and reproduce each figure. If you run into any problem, please send me an e-mail and I will try to respond shortly.  
+Now you should be able to go through each vignette and reproduce the paper. If you run into any problem, please send me an e-mail and I will try to respond shortly.  
