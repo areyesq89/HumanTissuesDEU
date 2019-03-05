@@ -10,7 +10,7 @@ doi: [10.1093/nar/gkx1165](https://www.doi.org/10.1093/nar/gkx1165)
 The code is organized as an **R** package containing 6 different vignettes that reproduce 
 different aspects of the manuscript:
 
-* Vignette `01_precomputedObjects.Rmd` contains the code to generated the pre-computed objects from this package. 
+* Vignette `01_precomputedObjects.Rmd` contains the code used to generate the pre-computed objects provided in this package. 
 * Vignette `02_figure1Analysis.Rmd` contains analyses and code related to Figure 1. 
 * Vignette `03_figure2Analysis.Rmd` contains analyses and code related to Figure 2.
 * Vignette `04_figure3Analysis.Rmd` contains analyses and code related to Figure 3.
