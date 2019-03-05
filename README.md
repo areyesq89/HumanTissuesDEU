@@ -20,7 +20,7 @@ different aspects of the manuscript:
 
 Since Github repositories have size limits, the **R** data objects of this package were deposited to
 zenodo. In order to reproduce the results of the manuscript, you will have to build this package by 
-following the next steps:
+following the next steps in a terminal:
 
 1. Clone this repository:
 
@@ -43,3 +43,4 @@ following the next steps:
 Now you should be able to go through each vignette and reproduce the paper. If you run into any problem, please send me an e-mail and I will try to respond shortly.
 
 **Note:** The code to plot the sashimi plots presented in the manuscript is available though this Github repository. These functions input bam files and, unfortunately, we are unable to provide these bam files since these contain potentially identifiable data. 
+**Note 2:** You will need a big computer (>20Gb of RAM) to reproduce the analysis.
