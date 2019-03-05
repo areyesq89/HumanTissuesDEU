@@ -13,7 +13,7 @@ different aspects of the manuscript:
 * Vignette `01_precomputedObjects.Rmd` contains the code to generated the pre-computed objects from this package. 
 * Vignette `02_figure1Analysis.Rmd` contains analyses and code related to figure 1. 
 * Vignette `03_figure2Analysis.Rmd` contains analyses and code related to figure 2.
-* Vignette`04_figure3Analysis.Rmd` contains analyses and code related to figure 3.
+* Vignette `04_figure3Analysis.Rmd` contains analyses and code related to figure 3.
 * Vignette `05_figure4Analysis.Rmd` contains analyses and code related to figure 4.
 * Vignette `06_figure5Analysis.Rmd` contains analyses and code related to figure 5.
 * Vignette `99_revisions.Rmd` contains plots that were generated to convince reviewers to accept our paper.
@@ -24,12 +24,22 @@ following the next steps:
 
 1. Clone this repository:
 
-2. Download **R** objects from zenodo:
+```
 
-3. Copy the downloaded objects to the corresponding data directories of the package
+```
 
-4. Build and install the package
+2. Download **R** objects from zenodo and copy them to the corresponding data directories of the package:
+
+```
+
+```
+
+3. Build and install the package:
+
+```
+
+```
 
 Now you should be able to go through each vignette and reproduce the paper. If you run into any problem, please send me an e-mail and I will try to respond shortly.
 
-`Note:` The code to plot the sashimi plots presented in the manuscript is available though this Github repository. These functions input bam files and, unfortunately, we are unable to provide these bam files since these contain potentially identifiable data. 
+**Note:** The code to plot the sashimi plots presented in the manuscript is available though this Github repository. These functions input bam files and, unfortunately, we are unable to provide these bam files since these contain potentially identifiable data. 
