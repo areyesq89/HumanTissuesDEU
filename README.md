@@ -30,4 +30,6 @@ following the next steps:
 
 4. Build and install the package
 
-Now you should be able to go through each vignette and reproduce the paper. If you run into any problem, please send me an e-mail and I will try to respond shortly.  
+Now you should be able to go through each vignette and reproduce the paper. If you run into any problem, please send me an e-mail and I will try to respond shortly.
+
+`Note:` The code to plot the sashimi plots presented in the manuscript is available though this Github repository. These functions input bam files and, unfortunately, we are unable to provide these files since these are potentially identifiable data. 
