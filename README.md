@@ -11,11 +11,11 @@ The code is organized as an **R** package containing 6 different vignettes that 
 different aspects of the manuscript:
 
 * Vignette `01_precomputedObjects.Rmd` contains the code to generated the pre-computed objects from this package. 
-* Vignette `02_figure1Analysis.Rmd` contains analyses and code related to figure 1. 
-* Vignette `03_figure2Analysis.Rmd` contains analyses and code related to figure 2.
-* Vignette `04_figure3Analysis.Rmd` contains analyses and code related to figure 3.
-* Vignette `05_figure4Analysis.Rmd` contains analyses and code related to figure 4.
-* Vignette `06_figure5Analysis.Rmd` contains analyses and code related to figure 5.
+* Vignette `02_figure1Analysis.Rmd` contains analyses and code related to Figure 1. 
+* Vignette `03_figure2Analysis.Rmd` contains analyses and code related to Figure 2.
+* Vignette `04_figure3Analysis.Rmd` contains analyses and code related to Figure 3.
+* Vignette `05_figure4Analysis.Rmd` contains analyses and code related to Figure 4.
+* Vignette `06_figure5Analysis.Rmd` contains analyses and code related to Figure 5.
 * Vignette `99_revisions.Rmd` contains plots that were generated to convince reviewers to accept our paper.
 
 Since Github repositories have size limits, the **R** data objects of this package were deposited to
