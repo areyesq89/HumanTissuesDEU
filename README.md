@@ -43,4 +43,5 @@ following the next steps in a terminal:
 Now you should be able to go through each vignette and reproduce the paper. If you run into any problem, please send me an e-mail and I will try to respond shortly.
 
 **Note:** The code to plot the sashimi plots presented in the manuscript is available though this Github repository. These functions input bam files and, unfortunately, we are unable to provide these bam files since these contain potentially identifiable data. 
+
 **Note 2:** You will need a big computer (>20Gb of RAM) to reproduce the analysis.
