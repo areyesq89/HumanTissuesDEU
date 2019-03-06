@@ -49,7 +49,7 @@ done
 uploaded <- read.table("HumanTissuesDEU/inst/files/md5sum.check")
 colnames(uploaded) <- c("md5up", "file")
 files <- list.files("HumanTissuesDEU", pattern="(RData|sqlite)$", full.names=TRUE, recursive=TRUE)
-downloaded <- md5sum(files)
+downloaded <- tools::md5sum(files)
 names(downloaded) <- basename(names( downloaded ))
 downloaded <- data.frame( md5down=downloaded, file=names(downloaded) )
 isOK <- all( with( merge( downloaded, uploaded ), md5down == md5up ) )
@@ -64,7 +64,7 @@ if( !isOK ){
 
 ```
 R CMD build HumanTissuesDEU
-R CMD INSTALL HumanTissuesDEU_0.0.99.tar.gz
+R CMD INSTALL HumanDEU_0.0.99.tar.gz
 ```
 
 If the build of the package was successful, the vignettes of the paper were compiled and the paper was reproduced! Now, you should also be able to go through each vignette and reproduce the paper. If you run into problems, please send me an e-mail and I will try to respond shortly.
