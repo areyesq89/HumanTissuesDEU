@@ -49,7 +49,7 @@ done
 uploaded <- read.table("HumanTissuesDEU/inst/files/md5sum.check")
 colnames(uploaded) <- c("md5up", "file")
 files <- list.files("HumanTissuesDEU", pattern="(RData|sqlite)$", full.names=TRUE, recursive=TRUE)
-downloaded <- md5sum(files)
+downloaded <- tools::md5sum(files)
 names(downloaded) <- basename(names( downloaded ))
 downloaded <- data.frame( md5down=downloaded, file=names(downloaded) )
 isOK <- all( with( merge( downloaded, uploaded ), md5down == md5up ) )
