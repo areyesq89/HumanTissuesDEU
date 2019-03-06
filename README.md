@@ -40,7 +40,6 @@ for i in `cat HumanTissuesDEU/inst/files/extdata.txt`
 do
 curl -o HumanTissuesDEU/inst/extdata/$i https://zenodo.org/record/2583270/files/$i
 done
-
 ```
 
 **3. Make sure that the files were downloaded correctly by comparing the *md5sum* results. You could do this in **R** by doing:**
@@ -57,6 +56,16 @@ if( !isOK ){
    stop("Files were not downloaded correctly, please try again!") 
 } else { 
    message("Files downloaded succesfully")
+}
+```
+
+**3. Install the packages needed to reproduce the code. You could do this in **R** by doing:**
+
+```
+needed <- desc::desc_get_deps("HumanTissuesDEU/DESCRIPTION")$package
+needed <- needed[!needed %in% rownames( installed.packages() )]
+if( length(needed) > 0 ){
+    BiocManager::install( needed )
 }
 ```
 
