@@ -80,4 +80,4 @@ If the build of the package was successful, the vignettes of the paper were comp
 
 **Note:** The code to plot the sashimi plots of this manuscript manuscript is available though this Github repository. These functions input bam files and, unfortunately, we are unable to provide these bam files since they contain potentially identifiable data. If you have access to the **GTEX** alignment data, the functions are expecting the bam files to have the format `/path/to/directory/alignments/<SRRID>/<SRRID>_Aligned.sortedByCoord.out.bam`. If you define an environent variable `export gtex=/path/to/directory`, the vignette will try to find the files and reproduce the sashimi plots. 
 
-**Note 2:** You will need a relatively big machine (>20Gb of RAM) to reproduce the analysis.
+**Note 2:** You will need a relatively big machine (>60Gb of RAM) to reproduce the analysis.
