@@ -10,13 +10,13 @@ doi: [10.1093/nar/gkx1165](https://www.doi.org/10.1093/nar/gkx1165)
 The code is organized as an **R** package containing 6 different vignettes that reproduce 
 different aspects of the manuscript:
 
-* Vignette `01_precomputedObjects.Rmd` contains the code used to generate the pre-computed objects provided in this package. 
-* Vignette `02_figure1Analysis.Rmd` contains analyses and code related to Figure 1. 
-* Vignette `03_figure2Analysis.Rmd` contains analyses and code related to Figure 2.
-* Vignette `04_figure3Analysis.Rmd` contains analyses and code related to Figure 3.
-* Vignette `05_figure4Analysis.Rmd` contains analyses and code related to Figure 4.
-* Vignette `06_figure5Analysis.Rmd` contains analyses and code related to Figure 5.
-* Vignette `99_revisions.Rmd` contains plots that were generated to convince reviewers to accept our paper.
+* Vignette [`01_precomputedObjects.Rmd`](https://github.com/areyesq89/HumanTissuesDEU/blob/master/vignettes/01_precomputedObjects.Rmd) contains the code used to generate the pre-computed objects provided in this package. ([html](http://htmlpreview.github.io/?https://github.com/areyesq89/HumanTissuesDEU/blob/master/inst/compiled_htmls/01_precomputedObjects.html))
+* Vignette [`02_figure1Analysis.Rmd`](https://github.com/areyesq89/HumanTissuesDEU/blob/master/vignettes/02_figure1Analysis.Rmd) contains analyses and code related to Figure 1. ([html](http://htmlpreview.github.io/?https://github.com/areyesq89/HumanTissuesDEU/blob/master/inst/compiled_htmls/02_figure1Analysis.html)) 
+* Vignette [`03_figure2Analysis.Rmd`](https://github.com/areyesq89/HumanTissuesDEU/blob/master/vignettes/03_figure2Analysis.Rmd) contains analyses and code related to Figure 2. ([html](http://htmlpreview.github.io/?https://github.com/areyesq89/HumanTissuesDEU/blob/master/inst/compiled_htmls/03_figure2Analysis.html))
+* Vignette [`04_figure3Analysis.Rmd`](https://github.com/areyesq89/HumanTissuesDEU/blob/master/vignettes/04_figure3Analysis.Rmd) contains analyses and code related to Figure 3. ([html](http://htmlpreview.github.io/?https://github.com/areyesq89/HumanTissuesDEU/blob/master/inst/compiled_htmls/04_figure3Analysis.html))
+* Vignette [`05_figure4Analysis.Rmd`](https://github.com/areyesq89/HumanTissuesDEU/blob/master/vignettes/05_figure4Analysis.Rmd) contains analyses and code related to Figure 4. ([html](http://htmlpreview.github.io/?https://github.com/areyesq89/HumanTissuesDEU/blob/master/inst/compiled_htmls/05_figure4Analysis.html))
+* Vignette [`06_figure5Analysis.Rmd`](https://github.com/areyesq89/HumanTissuesDEU/blob/master/vignettes/06_figure5Analysis.Rmd) contains analyses and code related to Figure 5. ([html](http://htmlpreview.github.io/?https://github.com/areyesq89/HumanTissuesDEU/blob/master/inst/compiled_htmls/06_figure5Analysis.html))
+* Vignette [`99_revisions.Rmd`](https://github.com/areyesq89/HumanTissuesDEU/blob/master/vignettes/99_revisions.Rmd) contains plots that were generated to convince reviewers to accept our paper. ([html](http://htmlpreview.github.io/?https://github.com/areyesq89/HumanTissuesDEU/blob/master/inst/compiled_htmls/99_revisions.html))
 
 Since Github repositories have size limits, the **R** data objects of this package were deposited in
 zenodo. In order to reproduce the results of the manuscript, you will have to build the **R** package by 
