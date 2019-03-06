@@ -1,0 +1,531 @@
+---
+title: "Analysis related to Figure 5"
+author: "Alejandro Reyes"
+date: "2017"
+package: "`r BiocStyle::pkg_ver('HumanDEU')`"
+output:
+  BiocStyle::html_document:
+    toc: true
+  vignette: >
+    %\VignetteIndexEntry{HumanDEU fig 5}
+    %\VignetteEngine{knitr::rmarkdown}
+    %\usepackage[utf8]{inputenc}
+---
+
+```{r echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache = FALSE,
+                      dev = "png",
+                      message = FALSE,
+                      error = FALSE,
+                      warning = TRUE)
+```
+
+# Estimating background set of exons with same distribution of mean expression and exon width
+
+```{r estimatingBackgrounds, eval=FALSE}
+
+library(DEXSeq)
+library(MatchIt)
+library(dplyr)
+library(HumanDEU)
+
+data(dxdObjects)
+data(resultsDF)
+data(geneInfo)
+
+widths <- width( rowRanges(dxd1) )
+names( widths ) <- rownames(dxd1)
+resultsDF$exonWidth <- widths[rownames(dxd1)]
+
+resultsDF <- resultsDF[resultsDF$gene %in%
+                       rownames(geneInfo)[geneInfo$gene_biotype=="protein_coding"],]
+
+backgroundExons <-
+    lapply( c("subsetA", "subsetB", "subsetC"),
+           function(x){
+               df <- filter( resultsDF, label == x )
+               df <- df[,c("gene", "exon", "mean", "tdu", "padj", "exonWidth")]
+               df$padj[is.na(df$padj)] <- 1
+               df$tdu[is.na(df$tdu)] <- 0
+               df <- mutate(df, sign=as.numeric(padj < 0.1 & tdu > 1))
+               set.seed(100)
+               rownames(df) <- with( df, paste(gene, exon, sep=":"))
+               mm <- matchit( sign ~ mean + exonWidth, df, method="nearest",
+                             distance="mahalanobis" )
+               mm$match.matrix[,1]
+           } )
+names(backgroundExons) <- LETTERS[1:3]
+
+#save(backgroundExons, file="../data/backgroundExons.RData")
+
+```
+
+# Exon categories
+
+Loading libraries and data objects.
+
+```{r loadDat}
+
+library(DEXSeq)
+library(ggplot2)
+library(GenomicFeatures)
+library(dplyr)
+library(HumanDEU)
+library(cowplot)
+library(ggpubr)
+
+path <- Sys.getenv("gtex")
+
+data( "resultsDF", "dxdObjects", "transcriptInfo",
+     "geneInfo", "backgroundExons", "geneTrack",
+     "crossCoefs1", "crossCoefs2", "crossCoefs3",
+     "crossCoefsJR1", "crossCoefsJR2", "crossCoefsJR3" )
+
+transcriptDb <-
+    loadDb( file.path(
+        system.file("extdata", package="HumanDEU"),
+        "GRCh38.sqlite" ) )
+
+```
+
+## Exons categories
+
+Based on the `transcriptDb` object, we extract 3'UTRs, coding regions and 5'UTRs. We also annotate transcripts according to whether they are classified as principal isoforms in the *APPRIS* database.
+
+```{r anno}
+
+aprisTxIDs <- rownames(transcriptInfo)[transcriptInfo$transcript_appris != ""]
+exonsByTx <- exonsBy(transcriptDb, "tx", use.names=TRUE)
+cdsByTx <- cdsBy( transcriptDb, "tx", use.names=TRUE )
+threeByTx <- threeUTRsByTranscript( transcriptDb )
+fiveByTx <- fiveUTRsByTranscript( transcriptDb )
+
+cdsIndexes <-
+    queryHits( findOverlaps(
+        rowRanges(dxd1),
+        cdsByTx ) )
+
+cdsAprisIndexes <-
+    queryHits( findOverlaps(
+        rowRanges(dxd1),
+        cdsByTx[aprisTxIDs] ) )
+
+threeUTRIndexes <-
+    queryHits( findOverlaps(
+        rowRanges(dxd1),
+        threeByTx ) )
+
+fiveUTRIndexes <-
+    queryHits( findOverlaps(
+        rowRanges(dxd1),
+        fiveByTx ) )
+
+exonAnnotation <- data.frame(
+    proteinCoding=seq_len(nrow(dxd1)) %in% cdsIndexes,
+    proteinCodingAppris=seq_len(nrow(dxd1)) %in% cdsAprisIndexes,
+    threeUTR=seq_len(nrow(dxd1)) %in% threeUTRIndexes,
+    fiveUTR=seq_len(nrow(dxd1)) %in% fiveUTRIndexes )
+rownames(exonAnnotation) <- rownames(dxd1)
+
+
+exonAnnotation$proteinCodingGene <-
+    sapply( strsplit( rownames( exonAnnotation ), ":" ), "[[", 1 ) %in%
+    filter( geneInfo, gene_biotype == "protein_coding" )$ensembl_gene_id
+
+```
+
+We now define a couple of functions to plot the proportion of exons with tissue-dependent exon usage in each of the different categories. To be conservative in our estimates, if an exonic region is classified as both protein coding and UTR, we assign it the protein coding category.
+
+```{r defineFuncts}
+
+disambiguateRegions <- function( x ){
+    stopifnot( all( x %in% rownames(exonAnnotation) ) )
+    exAnnotation <- exonAnnotation[x,]
+    stopifnot( all( exAnnotation$proteinCodingGene ) )
+    pcAppris <- exAnnotation$proteinCodingAppris
+    pcRest <- exAnnotation$proteinCoding &
+        !exAnnotation$proteinCodingAppris
+    threeUTR <- !exAnnotation$proteinCoding &
+        exAnnotation$threeUTR &
+        !exAnnotation$fiveUTR
+    fiveUTR <- !exAnnotation$proteinCoding &
+        exAnnotation$fiveUTR &
+        !exAnnotation$threeUTR
+    ambiguousUTR <- ( !exAnnotation$proteinCoding ) &
+        exAnnotation$fiveUTR & exAnnotation$threeUTR
+    otherUTR <- !exAnnotation$proteinCoding &
+        !exAnnotation$fiveUTR &
+        !exAnnotation$threeUTR
+    df <- data.frame(
+        `ApprisCoding`=pcAppris,
+        `OtherCoding`=pcRest,
+        `FiveUTR`=threeUTR,
+        `ThreeUTR`=fiveUTR,
+        `OtherUTR`=otherUTR )
+    rownames(df) <- x
+    df <- df[!ambiguousUTR,]
+    df
+}
+
+getConfDEUExons <- function(x, splicing=FALSE){
+    if(splicing){
+        thr <- 10
+        f <- `>`
+    }else{
+        thr <- 1
+        f <- `<`
+    }
+    with(
+        dplyr::filter( resultsDF,
+               label==paste0("subset", x),
+               padj < 0.1, tdu > 1,
+               f( esMeans, thr ),
+               gene %in% filter( geneInfo,
+                                gene_biotype == "protein_coding" )$ensembl_gene_id),
+        paste(gene, exon, sep=":") )
+}
+
+getProportions <- function( x, mergeUTRs=FALSE, percentages=TRUE, verbose=TRUE){
+    fore <- getConfDEUExons( x, splicing=TRUE )
+    foreNS <- getConfDEUExons( x, splicing=FALSE )
+    back <- backgroundExons[[x]]
+    numbers <- lapply( list( fore, foreNS, back), function(y){
+        drDf <- disambiguateRegions(y)
+        colSums( drDf )
+    })
+    numbers <- as.data.frame(do.call(cbind, numbers))
+    colnames(numbers) <- c("SplicingDEU", "OtherDEU", "Background")
+    if( mergeUTRs ){
+        numbers <- rbind(numbers[c("ApprisCoding", "OtherCoding"),],
+                         `Untranslated`=colSums(numbers[grep("UTR", rownames(numbers)),]) )
+    }
+    if( verbose ){
+        print(chisq.test(numbers))
+    }
+    if( percentages ){
+        numbers <- round( 100* t(t(numbers)/colSums(numbers)), 2)
+    }
+    df <- data.frame(
+        DEU=factor(rep(colnames(numbers), each=nrow(numbers) ),
+                   levels=c("SplicingDEU", "OtherDEU", "Background")),
+        Gen=factor(rep(rownames(numbers), ncol(numbers)),
+                   levels=c("ApprisCoding", "OtherCoding", "FiveUTR", "ThreeUTR", "OtherUTR")),
+        numb=as.vector(as.matrix(numbers)) )
+    nms1 <- c("DEU (AS)", "DEU (NAS)", "Background")
+    names(nms1) <- c("SplicingDEU", "OtherDEU", "Background")
+    nms2 <- c("Coding (PI)", "Coding (non-PI)", "5' UTR", "3' UTR", "Processed transcript")
+    names(nms2) <- c("ApprisCoding", "OtherCoding", "FiveUTR", "ThreeUTR", "OtherUTR")
+    levels(df$DEU) <- nms1[levels(df$DEU)]
+    levels(df$Gen) <- nms2[levels(df$Gen)]
+    df
+}
+
+plotProportions <- function(df){
+    cbPalette <- c('#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854')
+    pcp <- ggplot(df, aes( DEU, numb, fill=Gen)) +
+        geom_bar(stat="identity") +
+        theme(text=element_text(size=16),
+              axis.text.x=element_text(angle=20, hjust=1),
+              legend.text=element_text(size=12),
+              legend.key.width = unit(.09, "in"),
+              legend.title=element_blank()) + xlab("") +
+        ylab("% of exonic\nregions") +
+        scale_fill_manual(values=cbPalette)
+    pcp
+} 
+
+```
+
+## Plots
+
+Now we can plot the fraction of exons in each category (see the main paper for details).
+
+For subset `A`:
+
+```{r figure5A, fig.width=2.8, fig.height=3.5}
+
+#save_plot( file.path( path, "plots", "figure5PanelA.pdf"),
+plot_grid( plotProportions(
+    getProportions( "A", mergeUTRs=FALSE ) ) +
+    theme(legend.position="top") +
+    guides(fill=guide_legend(direction="horizontal", nrow=3,
+                             byrow=TRUE)))#,
+                                        #base_height=3.5, base_width=2.8, unit="in")
+```
+
+For subsets `B` and `C`:
+
+```{r figSupCoding, fig.width=7.5, fig.height=3}
+
+prow <- plot_grid(
+    plotProportions( getProportions("B", mergeUTRs=FALSE)) +
+    theme(legend.position="none"),
+    plotProportions( getProportions("C", mergeUTRs=FALSE)) +
+    theme(legend.position="none"),
+    align = 'vh', labels = c("A", "B") )
+leg <- get_legend( plotProportions( getProportions("B", mergeUTRs=FALSE)))
+
+#save_plot( file.path(path, "plots", "figSupCoding.png"),
+plot_grid( prow, leg, nrow = 1, rel_widths=c(1, .4))#,
+#base_width=7.5, base_height=3) 
+#
+
+```
+
+## $p$-values
+
+```{r}
+
+getIndivPval <- function( subset="A", categ="Coding (PI)",
+                         what=c("DEU (AS)", "DEU (NAS)", "Background"),
+                         returnMat=FALSE){
+    numbs <- getProportions(subset, percentage=FALSE, verbose=FALSE)
+    mt <- matrix(0, ncol=2, nrow=3)
+    rownames( mt ) <- c("DEU (AS)", "DEU (NAS)", "Background")
+    colnames( mt ) <- c( categ, "Others")
+    numbIn <- filter( numbs, Gen == categ )$numb
+    names( numbIn ) <- filter( numbs, Gen == categ )$DEU
+    numbOut <- tapply(
+        filter( numbs, Gen != categ )$numb,
+        filter( numbs, Gen != categ )$DEU,
+        sum)
+    mt[,categ] <- numbIn[rownames(mt)]
+    mt[,"Others"] <- numbOut[rownames(mt)]
+    mt <- mt[rownames( mt ) %in% what,]
+    if( returnMat ){
+        return(mt)
+    }
+    print(mt)
+    chisq.test(mt)
+}
+
+getIndivPval( "A", categ="5' UTR", what=c("DEU (NAS)", "Background") )
+getIndivPval( "B", categ="5' UTR", what=c("DEU (NAS)", "Background") )
+getIndivPval( "C", categ="5' UTR", what=c("DEU (NAS)", "Background") )
+
+getIndivPval( "A", categ="3' UTR", what=c("DEU (NAS)", "Background") )
+getIndivPval( "B", categ="3' UTR", what=c("DEU (NAS)", "Background") )
+getIndivPval( "C", categ="3' UTR", what=c("DEU (NAS)", "Background") )
+
+```
+
+## related table
+
+```{r table}
+
+table7 <- do.call(rbind, lapply(c("A", "B", "C"), function(x){
+    df <- cbind( subset=x, getProportions( x, percentage=FALSE, verbose=FALSE ) )
+    df$Percentage <- getProportions( x, percentage=TRUE, verbose=FALSE )$numb
+    colnames( df ) <- c("Subset", "Exon usage class", "Genomic class", "# of exons", "% of exons")
+    df
+}) )
+
+table7
+
+library(xtable)
+
+print(xtable(table7, display=c("d", "s", "s", "s", "d", "f"),
+                            caption="Classification of exonic regions
+  according to their usage across tissues and to transcript
+  isoform annotations. The first column indicates the GTEx subset.
+  The second column indicates exonic region classifications according
+  to whether (a) they were detected to be differentially used and had
+  a mean larger than ten of normalized reads supporting their alternative
+  splicing [DEU (AS)], (b) they were differentially used and had a mean
+  smaller than 1 of normalized read supporting their alternative splicing
+  [DEU (NAS)], or (c) they were part of the background matched for expression
+  strength and width [background]. The third column shows the exonic
+  region classes according to transcript isoform annotations. The
+  fourth column shows the number of exonic regions in each exon class. The
+  fifth column shows, for each usage category on each data subset,
+  the percentage exonic regions in each genomic class.",
+  label="tabS:table7"
+  ),
+  file="table7.tex",
+  format.args = list(big.mark = ",", decimal.mark = "."),
+  hline.after=c(-1, 0, 5, 10, 15, 20,
+                25, 30, 35, 40, 45),
+  math.style.exponents = TRUE, digits=0,
+  size="\\footnotesize",
+  include.rownames=FALSE )
+
+```
+
+# Single gene plots
+
+## PKD1
+
+```{r PKD1, fig.height=1.8, fig.width=5}
+
+gn <- "ENSG00000008710"
+ft <- "E051"
+exns <- paste(gn, ft, sep=":")
+plotGeneREUCs( crossCoefsJR1, geneName=gn,colLim=0.03,
+              exons=sprintf("E%.3d", 50:52) ) +
+    guides(fill = guide_colorbar(title="RSIC") )
+
+```
+
+```{r PKD1sashimi, fig.height=3, fig.width=3}
+
+options(ucscChromosomeNames=FALSE)
+
+coordIndex <- which( rownames(dxd1) %in% exns )
+coordIndex <- c(min(coordIndex) - 1, coordIndex, max(coordIndex) + 1)
+coords <- range(rowRanges(dxd1)[coordIndex])
+samples <- HumanDEU:::getSampleIdentifiers(
+    c( "Brain - Cerebellum", "Brain - Frontal Cortex (BA9)" ),
+    "GTEX-WL46",
+    dxd1 )
+
+path <- Sys.getenv("gtex")
+bamFiles <- sapply( samples, function(x){
+    file.path( path, "alignments", x,
+              sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+} )
+
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi(
+        bamFiles,
+        nameVec=c("Cerebellum", "Frontal\ncortex"),
+        geneID=gn, coords=coords, transcriptDb=transcriptDb,
+        geneTrack=geneTrack, highlight=ft,
+        plotTranscripts=TRUE, sizes=c(1.2, 1.2, .6, .4) )
+}
+
+```
+
+## MAN2B2
+
+```{r man2b2, fig.height=1.8, fig.width=5}
+
+gn <- "ENSG00000013288"
+ft <- "E018"
+exns <- paste(gn, ft, sep=":")
+coordIndex <- which( rownames(dxd2) %in% exns )
+coordIndex <- c(min(coordIndex) - 1, coordIndex, max(coordIndex) + 1)
+coords <- range(rowRanges(dxd2)[coordIndex])
+
+plotGeneREUCs( crossCoefsJR2, geneName=gn, colLim=0.02,
+              exons=sprintf("E%.3d", 17:19)) +
+    guides(fill = guide_colorbar(title="RSIC") )
+
+```
+
+```{r MAN2B2sashimi, fig.height=3, fig.width=3}
+
+samples <- HumanDEU:::getSampleIdentifiers(
+    c( "Artery - Tibial", "Whole Blood" ),
+    "GTEX-ZTPG",
+    dxd2 )
+
+path <- Sys.getenv("gtex")
+bamFiles <- sapply( samples, function(x){
+    file.path( path, "alignments", x,
+              sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+} )
+
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi(
+        bamFiles, nameVec=c("Tibial\nartery", "Blood"),
+        geneID=gn, coords=coords, transcriptDb=transcriptDb,
+        geneTrack=geneTrack, highlight=ft,
+        plotTranscripts=TRUE, sizes=c(1.2, 1.2, .6, .4) )
+}
+
+```
+
+## NISCH
+
+```{r nisch, fig.height=1.8, fig.width=5}
+
+gn <- "ENSG00000010322"
+ft <- "E009"
+exns <- paste(gn, ft, sep=":")
+coordIndex <- which( rownames(dxd3) %in% exns )
+coordIndex <- c(min(coordIndex) - 1, coordIndex, max(coordIndex) + 1)
+coords <- range(rowRanges(dxd3)[coordIndex])
+plotGeneREUCs(
+    crossCoefsJR3, geneName=gn,
+    colLim=0.02,
+    exons=sprintf("E%.3d", 8:10) ) +
+    guides(fill = guide_colorbar(title="RSIC") )
+
+```
+
+```{r nischsashimi, fig.height=3, fig.width=3}
+
+samples <- HumanDEU:::getSampleIdentifiers(
+    c("Esophagus - Muscularis", "Heart - Left Ventricle"),
+    "GTEX-111YS",
+    dxd3 )
+
+path <- Sys.getenv("gtex")
+bamFiles <- sapply( samples, function(x){
+    file.path( path, "alignments", x,
+              sprintf("%s_Aligned.sortedByCoord.out.bam", x ) )
+} )
+
+if(  all( file.exists(bamFiles) ) ){
+    plotSashimi(
+        bamFiles, nameVec=c("Esophagus", "Heart"),
+        geneID=gn, coords=coords,
+        transcriptDb=transcriptDb,
+        geneTrack=geneTrack, highlight=ft,
+        plotTranscripts=TRUE, sizes=c(1.2, 1.2, .6, .4) )
+}
+
+```
+
+## Expression per exon class
+
+```{r supp, fig.height=7, fig.width=6}
+
+plotDf <- lapply( c("A", "B", "C"), function(x){
+    exonLists <- list(
+        confSp=getConfDEUExons( x, splicing=FALSE ),
+        confNSp=getConfDEUExons( x, splicing=TRUE ),
+        back=backgroundExons[[x]] )
+    spUnique <- strsplit( unique(unlist( exonLists ) ), ":" )
+    tmpDf <- filter( resultsDF,
+                    label==paste0("subset", x),
+                    paste(gene, exon, sep=":") %in% unlist(exonLists) )
+    rownames( tmpDf ) <- with(tmpDf, paste(gene, exon, sep=":"))
+    tmpDf$exonClass <- NA
+    for( x in names(exonLists) ){
+        tmpDf[exonLists[[x]],"exonClass"] <- x
+    }
+    tmpDf <- tmpDf[,c("mean", "label", "exonClass")]
+    exonClass <- disambiguateRegions( rownames(tmpDf) )
+    tmpDf <- tmpDf[rownames(exonClass),]
+    exonClass2 <- colnames(exonClass)[apply( exonClass, 1, which)]
+    tmpDf$exonClass2 <- exonClass2
+    tmpDf
+} )
+
+plotDf <- do.call(rbind, plotDf)
+plotDf$mean <- log10( plotDf$mean + 1 )
+plotDf$exonClass <- factor(
+    plotDf$exonClass,
+    levels=c("confSp", "confNSp", "back"))
+levels( plotDf$exonClass ) <- c("DEU (Splicing)", "DEU (Other)", "Background")
+levels( plotDf$label ) <- c("A", "B", "C")
+plotDf$exonClass2 <-
+    factor( plotDf$exonClass2,
+           levels=c("ApprisCoding", "OtherCoding", "FiveUTR", "ThreeUTR", "OtherUTR") )
+levels( plotDf$exonClass2 ) <-
+    c("Coding (PI)", "Coding (non-PI)",
+      "5' UTR", "3' UTR", "Processed transcript")
+
+ggplot( plotDf, aes( exonClass2, mean ) ) +
+    geom_boxplot(outlier.shape = NA) +
+    facet_grid( label ~ exonClass ) + theme_bw() +
+    xlab("") + ylab(expression(paste("Normalized mean counts (", log[10], ")"))) +
+    ylim(0, 4) +
+    theme( axis.text = element_text(size = 14),
+          axis.text.x=element_text(angle=90, vjust=.35, hjust=1),
+          axis.title=element_text(size=14),
+          strip.text = element_text(size = 12) )
+
+```
