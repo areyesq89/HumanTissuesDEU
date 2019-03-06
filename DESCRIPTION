@@ -9,5 +9,5 @@ Description: This data package contains the code and data needed to reproduce th
 License: LGPL
 biocViews: ExperimentData
 VignetteBuilder: knitr
-Suggests: DESeq2, GenomicRanges, GenomicFeatures, genefilter, statmod, gdata, RColorBrewer, ggplot2, gplots, cluster, clue, grid, gridExtra, ggbio, Gviz, geneplotter, matrixStats, pheatmap, BiocStyle, knitr
+Suggests: DESeq2, GenomicRanges, GenomicFeatures, genefilter, statmod, gdata, RColorBrewer, ggplot2, gplots, cluster, clue, grid, gridExtra, ggbio, Gviz, geneplotter, matrixStats, pheatmap, BiocStyle, knitr, scales, cowplot, matrixStats, dplyr, MatchIt, xtable, VennDiagram, DEXSeq
 RoxygenNote: 6.0.1
