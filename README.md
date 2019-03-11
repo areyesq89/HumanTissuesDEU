@@ -72,7 +72,7 @@ if( length(needed) > 0 ){
 **4. Build and install the package:**
 
 ```
-R CMD build HumanTissuesDEU
+R CMD build --no-resave-data HumanTissuesDEU
 R CMD INSTALL HumanDEU_0.0.99.tar.gz
 ```
 
